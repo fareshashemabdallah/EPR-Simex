@@ -19,7 +19,7 @@ This branch adds an isolated, no-build frontend at `platform/index.html` plus a 
 ## Reproduce the test database (new test Supabase project only)
 
 1. Use a dedicated, empty Supabase **test** project. The first test project is already created; do **not** rerun initial `schema.sql` against it.
-2. On a NEW empty test database, carefully review and apply, **in order**, `platform/sql/schema.sql`, `002_restrict_function_permissions.sql`, `003_fix_cross_exercise_messages_and_inject_returning.sql`, `004_guard_document_and_invitation_scopes.sql`, , `005_fix_document_insert_returning.sql`, and `006_move_rls_helpers_to_private_schema.sql`. These are development migrations, not production certifications.
+2. On a NEW empty test database, carefully review and apply, **in order**, `platform/sql/schema.sql`, `002_restrict_function_permissions.sql`, `003_fix_cross_exercise_messages_and_inject_returning.sql`, `004_guard_document_and_invitation_scopes.sql`, `005_fix_document_insert_returning.sql`, and `006_move_rls_helpers_to_private_schema.sql`. These are development migrations, not production certifications.
 3. Confirm Email authentication and email verification are enabled; set an approved test site URL and redirect paths in Supabase Auth. Production authentication settings have not been verified from a real browser.
 4. Set the project URL and **publishable** key in `platform/config.js` for the intended test deployment. Never add service_role, sb_secret, passwords, or JWT signing secrets.
 5. Keep GitHub Pages on **main** for READY72. To try the development branch locally, clone/check out `development/secure-platform` and run a static HTTP server, then open `/platform/` in the browser. Do not switch the production Pages source.
