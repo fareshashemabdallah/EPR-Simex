@@ -22,7 +22,7 @@ jobs:
       - name: Check JavaScript syntax
         run: node --check platform/app.js
       - name: Run static prototype tests
-        run: node --test platform/tests/static.test.mjs
+        run: node --test platform/tests/*.test.mjs
       - name: Inspect public configuration
         run: |
           test -f platform/index.html
