@@ -6,10 +6,11 @@ Run from repository root after serving files at localhost:8080:
     python platform/tests/browser_e2e.py
 """
 import json
+import os
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright
 
-URL = "http://127.0.0.1:8080/platform/"
+URL = os.environ.get("EPR_APP_URL", "http://127.0.0.1:8080/platform/")
 BACKEND = "rqspzcnkbftytldggezc.supabase.co"
 USER = {"id": "10000000-0000-4000-8000-000000000099", "email": "facilitator@example.org"}
 
