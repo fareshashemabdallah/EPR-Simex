@@ -48,3 +48,7 @@ jobs:
           sleep 2
       - name: Run real Chromium UI flow (synthetic backend)
         run: python platform/tests/browser_e2e.py
+      - name: Run Chromium against live GitHub Pages preview (synthetic backend)
+        env:
+          EPR_APP_URL: https://fareshashemabdallah.github.io/EPR-Simex/preview/
+        run: python platform/tests/browser_e2e.py
