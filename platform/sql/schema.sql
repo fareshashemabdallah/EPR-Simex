@@ -456,14 +456,15 @@ language sql stable security definer set search_path = public as $$
   select exists(select 1 from document_records d where d.storage_path=_name and public.can_view_document(d.id))
 $$;
 create or replace function public.can_upload_storage_object(_name text) returns boolean
-language plpgsql stable security definer set search_path = public as $$
-declare p1 text := split_part(_name,'/',1); p2 text := split_part(_name,'/',2);
-begin
-  if p1 !~ '^[0-9a-f-]{36}$' then return false; end if;
-  if p2 = 'org' then return public.can_manage_doc_scope(p1::uuid, null); end if;
-  if p2 !~ '^[0-9a-f-]{36}$' then return false; end if;
-  return public.can_manage_doc_scope(p1::uuid, p2::uuid);
-end $$;
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.document_records d
+    where d.kind = 'file'
+      and d.storage_path = _name
+      and d.owner_id = auth.uid()
+      and public.can_manage_doc_scope(d.org_id, d.exercise_id)
+  )
+$$;
 
 -- ===== TRIGGERS: tenant consistency, validation, audit =====
 create or replace function public.set_org_from_exercise() returns trigger
@@ -732,7 +733,7 @@ do $$ declare t text; begin
 end $$;
 create policy teams_org_admin_select on public.teams for select to authenticated using (public.has_org_role(org_id, array['org_admin']::org_role[]));
 
-create policy tm_select on public.team_memberships for select to authenticated using (public.is_ex_member(exercise_id));
+create policy tm_select on public.team_memberships for select to authenticated using (public.is_ex_staff(exercise_id) or user_id = auth.uid() or public.is_team_member(team_id));
 create policy tm_insert on public.team_memberships for insert to authenticated with check (public.is_ex_staff(exercise_id));
 create policy tm_update on public.team_memberships for update to authenticated using (public.is_ex_staff(exercise_id)) with check (public.is_ex_staff(exercise_id));
 create policy tm_delete on public.team_memberships for delete to authenticated using (public.is_ex_staff(exercise_id));
