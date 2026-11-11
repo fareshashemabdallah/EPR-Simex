@@ -1,7 +1,7 @@
-// Set only PUBLIC Supabase project URL and publishable/anon key.
-// Do not store database passwords or secret/service_role keys in this public repository.
-// Copy values from your *separate test Supabase project* after reviewing platform/README.md.
+// Public Supabase project configuration for EPR-Simex TEST only.
+// This publishable key is intentionally public and has no admin privileges.
+// The database MUST enforce row-level security. NEVER commit private secrets.
 window.EPR_CONFIG = {
-  supabaseUrl: "",
-  publishableKey: ""
+  supabaseUrl: "https://rqspzcnkbftytldggezc.supabase.co",
+  publishableKey: "sb_publishable_7NB2RwoiLwgNFcq43rGsOg_K_QcozSm"
 };
