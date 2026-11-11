@@ -63,10 +63,22 @@ test("unconfigured environment shows a truthful setup screen",async()=>{
   assert.match(h.root.innerHTML,/Database connection required/);
   assert.doesNotMatch(h.root.innerHTML,/Sign in to your/);
 });
+test("create-account screen invokes signup and displays verification guidance",async()=>{
+  const h=harness();
+  await new Promise(setImmediate);
+  assert.match(h.root.innerHTML,/Create your account/);
+  const html=await h.submit("auth",{email:"test@example.org",password:"test-password-123",confirmPassword:"test-password-123"},"signup");
+  assert.match(html,/Registration request sent/);
+  assert.match(html,/test@example.org/);
+  await h.click("auth-mode",{mode:"signin"});
+  assert.match(h.root.innerHTML,/Sign in/);
+});
 test("auth -> org -> exercise -> team -> stage -> targeted inject",async()=>{
   const h=harness();
   await new Promise(setImmediate);
-  assert.match(h.root.innerHTML,/Secure sign-in/);
+  assert.match(h.root.innerHTML,/Create your account/);
+  await h.click("auth-mode",{mode:"signin"});
+  assert.match(h.root.innerHTML,/Sign in/);
   await h.submit("auth",{email:"facilitator@example.org",password:"test-password-12"},"signin");
   assert.match(h.root.innerHTML,/Create organization/);
   await h.submit("organization",{name:"Agency Training Unit",description:"Synthetic simulation only"});
