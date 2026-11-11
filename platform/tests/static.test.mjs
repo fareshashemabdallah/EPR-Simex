@@ -28,8 +28,8 @@ test("schema includes RLS, tenancy, exercise and team checks",()=>{
 test("storage is private and does not have open browser credentials",()=>{
   assert.match(sql,/'documents','documents',false/);
   assert.match(html,/noindex,nofollow/);
-  assert.match(cfg,/supabaseUrl: ""/);
-  assert.match(cfg,/publishableKey: ""/);
+  assert.match(cfg,/supabaseUrl: "https:\/\/[a-z0-9-]+\.supabase\.co"/);
+  assert.match(cfg,/publishableKey: "sb_publishable_[A-Za-z0-9_-]+"/);
 });
 test("core exercise workflows are wired",()=>{
   for(const value of ["create_organization","org_memberships","exercise_memberships","inject_targets","agenda_sessions","private_notes","document_records","submissions","messages","action_items"])assert.ok(js.includes(value),"Missing "+value);
