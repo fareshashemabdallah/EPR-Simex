@@ -26,6 +26,29 @@ This branch adds an isolated, no-build frontend at `platform/index.html` plus a 
 6. Run `platform/tests/rls_smoke.sql`, `platform/tests/rls_documents_invites.sql`, and `platform/tests/rls_training_studio.sql` against a test database only. Each script intentionally impersonates synthetic users under the authenticated Postgres role, asserts access controls and rolls back its test fixtures. This is not a substitute for real account integration testing.
 7. Run `platform/tests/UAT.md` manually with separate verified test accounts before a pilot.
 
+## Published test interface
+
+The separately named, static **preview** is reachable at:
+
+https://fareshashemabdallah.github.io/EPR-Simex/preview/
+
+It consists of **four interface files** copied to `main/preview/` after automated tests. The original `main/index.html` READY72 application is unchanged. The preview is public to view, but agency content is protected by the Supabase authentication and database permissions. No real agency information should be entered.
+
+### Required first-user configuration
+
+Supabase Auth configuration is managed through the dashboard; it has **not** been changed automatically by this GitHub connector:
+
+1. Visit [EPR-Simex-Test → Authentication → URL Configuration](https://supabase.com/dashboard/project/rqspzcnkbftytldggezc/auth/url-configuration).
+2. Set **Site URL** to `https://fareshashemabdallah.github.io/EPR-Simex/preview/`.
+3. Add that exact address to the allowed **Redirect URLs**; add an appropriately limited URL pattern if invitation query strings are used.
+4. Ensure **Confirm email** is enabled under Email provider configuration.
+5. Create an account with a real mailbox you control, verify the email, and sign in at the preview URL.
+6. For full training UAT, invite two additional test accounts with distinct addresses, assign different teams and verify access on separate browsers. Never share passwords.
+
+The default Supabase mailer may have low delivery quotas; configure an approved SMTP provider before any serious multi-user pilot. Do not disable email verification to avoid this configuration.
+
+The published preview has passed GitHub Pages reachability checks and local Chromium exercises with **synthetic intercepted backend responses**. Those are distinct from full live email verification and user-session tests.
+
 ## Security verification is a release blocker
 
 Use `platform/tests/UAT.md`. Test at least **two different organizations and two different participant teams** with distinct real verified accounts on separate browsers. Specifically test direct API calls for cross-tenant data, unreleased injects, facilitator-only notes, upload/download object access, role escalation, unexpected state transitions, invite redemption and repeat use.
