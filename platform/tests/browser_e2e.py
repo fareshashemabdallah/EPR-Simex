@@ -87,7 +87,15 @@ def handler(route):
                          headers={"access-control-allow-origin": "*"}, body=json.dumps(response))
 
 def check_label(page, label):
-    page.get_by_text(label, exact=False).first.wait_for(timeout=8000)
+    try:
+        page.get_by_text(label, exact=False).first.wait_for(timeout=8000)
+    except Exception:
+        print("DIAGNOSTIC expected:", label)
+        print("DIAGNOSTIC current screen:", page.locator("body").inner_text()[:4000])
+        print("DIAGNOSTIC agenda state:", json.dumps({
+            "days": state["agenda_days"], "sessions": state["agenda_sessions"], "slides": state["slides"]
+        })[:3000])
+        raise
 
 def run():
     with sync_playwright() as play:
