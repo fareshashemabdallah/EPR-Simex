@@ -105,7 +105,7 @@ def run():
 
         page.locator('form[data-form="organization"] input[name="name"]').fill("Fictional Agency")
         page.locator('form[data-form="organization"] button').click()
-        check_label(page, "Fictional Agency")
+        page.locator("h2").filter(has_text="Fictional Agency").first.wait_for(timeout=8000)
         page.locator('form[data-form="exercise"] input[name="title"]').fill("Riverland Flood SIMEX")
         page.locator('form[data-form="exercise"] button').click()
         check_label(page, "Riverland Flood SIMEX")
