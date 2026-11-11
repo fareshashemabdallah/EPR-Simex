@@ -29,3 +29,22 @@ jobs:
           test -f platform/config.js
           test -f platform/sql/schema.sql
           ! grep -E 'sb_secret_[A-Za-z0-9]{10}|service_role\s*[:=]\s*["\x27][A-Za-z0-9]' platform/config.js
+
+  chromium-browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned browser-test dependency
+        run: |
+          python -m pip install "playwright==1.57.0"
+          python -m playwright install --with-deps chromium
+      - name: Start isolated development web server
+        run: |
+          python -m http.server 8080 --bind 127.0.0.1 > /tmp/epr-server.log 2>&1 &
+          sleep 2
+      - name: Run real Chromium UI flow (synthetic backend)
+        run: python platform/tests/browser_e2e.py
