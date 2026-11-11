@@ -15,7 +15,7 @@ BACKEND = "rqspzcnkbftytldggezc.supabase.co"
 USER = {"id": "10000000-0000-4000-8000-000000000099", "email": "facilitator@example.org"}
 
 state = {
-    "org": False,
+    "org": False, "signup_requests": 0,
     "exercise": None,
     "teams": [], "stages": [], "injects": [], "inject_targets": [],
     "agenda_days": [], "agenda_sessions": [], "slides": [], "submissions": [],
@@ -40,7 +40,10 @@ def handler(route):
             "access-control-allow-methods": "GET,POST,PATCH,PUT,DELETE,OPTIONS",
             "access-control-allow-headers": "apikey,authorization,content-type,prefer,x-upsert",
         })
-    if path.startswith("/auth/v1/token"):
+    if path == "/auth/v1/signup":
+        state["signup_requests"] += 1
+        response = {"user": USER}
+    elif path.startswith("/auth/v1/token"):
         response = {"user": USER, "access_token": "test-access-token",
                     "refresh_token": "test-refresh-token", "expires_in": 3600}
     elif path == "/auth/v1/user":
@@ -106,7 +109,16 @@ def run():
         page.on("pageerror", lambda err: errors.append(str(err)))
         page.route(f"https://{BACKEND}/**", handler)
         page.goto(URL, wait_until="load")
-        check_label(page, "Secure sign-in")
+        check_label(page, "Create your account")
+        page.locator('form[data-form="auth"] input[name="email"]').fill(USER["email"])
+        page.locator('form[data-form="auth"] input[name="password"]').fill("fictional-password-only")
+        page.locator('form[data-form="auth"] input[name="confirmPassword"]').fill("fictional-password-only")
+        page.locator('form[data-form="auth"] button[value="signup"]').click()
+        check_label(page, "Registration request sent.")
+        assert state["signup_requests"] == 1, "Create account never called the signup endpoint"
+
+        page.locator('button[data-cmd="auth-mode"][data-mode="signin"]').click()
+        check_label(page, "Sign in")
         page.locator('form[data-form="auth"] input[name="email"]').fill(USER["email"])
         page.locator('form[data-form="auth"] input[name="password"]').fill("fictional-password-only")
         page.locator('form[data-form="auth"] button[value="signin"]').click()
