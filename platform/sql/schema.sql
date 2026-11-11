@@ -804,6 +804,19 @@ create policy inv_update on public.invitations for update to authenticated using
 create policy audit_select on public.audit_events for select to authenticated using (
   (org_id is not null and public.has_org_role(org_id, array['org_admin']::org_role[])) or (exercise_id is not null and public.is_ex_staff(exercise_id)));
 
+-- Supabase storage must be provisioned as part of the portable GitHub setup.
+-- This is a PRIVATE bucket. Direct public object URLs must not work.
+insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
+values ('documents','documents',false,20971520,array[
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv','image/png','image/jpeg'
+]) on conflict(id) do update
+  set public=false, file_size_limit=excluded.file_size_limit,
+      allowed_mime_types=excluded.allowed_mime_types;
+
 -- ===== STORAGE POLICIES (private bucket) =====
 create policy "documents read authorized" on storage.objects for select to authenticated using (bucket_id = 'documents' and public.can_read_storage_object(name));
 create policy "documents upload scoped" on storage.objects for insert to authenticated with check (bucket_id = 'documents' and public.can_upload_storage_object(name));
