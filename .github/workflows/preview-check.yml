@@ -1,0 +1,38 @@
+name: Verify isolated EPR-Simex preview
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'preview/**'
+      - '.github/workflows/preview-check.yml'
+permissions:
+  contents: read
+jobs:
+  preview-availability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify static preview files are present
+        run: |
+          test -s preview/index.html
+          test -s preview/app.js
+          test -s preview/styles.css
+          test -s preview/config.js
+          grep -q "noindex,nofollow" preview/index.html
+      - name: Check public GitHub Pages preview is reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://fareshashemabdallah.github.io/EPR-Simex/preview/"
+          for i in $(seq 1 24); do
+            if curl --fail --location --silent --show-error --max-time 12 "$url" > /tmp/epr-preview.html; then
+              if grep -qi "EPR-Simex Platform" /tmp/epr-preview.html; then
+                echo "Preview is live: $url"
+                exit 0
+              fi
+            fi
+            sleep 8
+          done
+          echo "GitHub Pages preview not reachable or content mismatch"
+          exit 1
