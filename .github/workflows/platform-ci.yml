@@ -1,0 +1,31 @@
+name: EPR-Simex Platform Checks
+on:
+  push:
+    branches: [development/secure-platform]
+    paths:
+      - 'platform/**'
+      - '.github/workflows/platform-ci.yml'
+  pull_request:
+    paths:
+      - 'platform/**'
+      - '.github/workflows/platform-ci.yml'
+permissions:
+  contents: read
+jobs:
+  static-and-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: node --check platform/app.js
+      - name: Run static prototype tests
+        run: node --test platform/tests/static.test.mjs
+      - name: Inspect public configuration
+        run: |
+          test -f platform/index.html
+          test -f platform/config.js
+          test -f platform/sql/schema.sql
+          ! grep -E 'sb_secret_[A-Za-z0-9]{10}|service_role\s*[:=]\s*["\x27][A-Za-z0-9]' platform/config.js
