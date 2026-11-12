@@ -133,12 +133,41 @@ def run():
         page.locator('form[data-form="auth"] button[value="signin"]').click()
         check_label(page, "Create organization")
 
+        # First-login onboarding is visible, can be completed, and remains restartable.
+        page.locator("section.guide-panel").wait_for(timeout=8000)
+        check_label(page, "Welcome to EPR-Simex")
+        page.locator('button[data-cmd="guide-next"]').click()
+        check_label(page, "Your organization")
+        page.locator('button[data-cmd="guide-back"]').click()
+        check_label(page, "Welcome to EPR-Simex")
+        page.locator('button[data-cmd="guide-skip"]').click()
+        page.locator('button[data-cmd="guide-start"]').click()
+        check_label(page, "Welcome to EPR-Simex")
+        page.locator('button[data-cmd="guide-skip"]').click()
+
+        # Always-on Help describes each available section and is dismissible.
+        page.locator('button[data-cmd="help-open"]').click()
+        page.locator('[role="dialog"] #help-title').wait_for(timeout=8000)
+        check_label(page, "Scenario & injects")
+        page.locator('button[data-cmd="help-go"][data-tab="scenario"]').is_disabled()
+        page.locator('button[data-cmd="help-close"]').first.click()
+        assert page.locator('[role="dialog"]').count() == 0
+
         page.locator('form[data-form="organization"] input[name="name"]').fill("Fictional Agency")
         page.locator('form[data-form="organization"] button').click()
         page.locator("h2").filter(has_text="Fictional Agency").first.wait_for(timeout=8000)
         page.locator('form[data-form="exercise"] input[name="title"]').fill("Riverland Flood SIMEX")
         page.locator('form[data-form="exercise"] button').click()
         check_label(page, "Riverland Flood SIMEX")
+
+        page.locator(".feature-hint h2").filter(has_text="Live control & briefing").wait_for(timeout=8000)
+        page.locator('button[data-cmd="hint-toggle"]').click()
+        page.locator('.feature-hint ol li').first.wait_for(timeout=8000)
+        page.locator('button[data-cmd="hint-toggle"]').click()
+        page.locator('button[data-cmd="help-open"]').click()
+        page.locator('button[data-cmd="help-go"][data-tab="scenario"]').click()
+        page.locator(".feature-hint h2").filter(has_text="Scenario & injects").wait_for(timeout=8000)
+        page.locator('.feature-hint ol li').first.wait_for(timeout=8000)
 
         page.locator('button[data-cmd="tab"][data-tab="teams"]').click()
         page.locator('form[data-form="team"] input[name="name"]').fill("Team Alpha")
