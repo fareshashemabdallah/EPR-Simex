@@ -68,7 +68,10 @@ test("create-account screen invokes signup and displays verification guidance",a
   await new Promise(setImmediate);
   assert.match(h.root.innerHTML,/Create your account/);
   const html=await h.submit("auth",{email:"test@example.org",password:"test-password-123",confirmPassword:"test-password-123"},"signup");
-  assert.match(html,/Registration request sent/);
+  assert.match(html,/Registration request received/);
+  assert.match(html,/resend-confirmation/);
+  await h.click("resend-confirmation");
+  assert.match(h.root.innerHTML,/Supabase accepted the verification request/);
   assert.match(html,/test@example.org/);
   await h.click("auth-mode",{mode:"signin"});
   assert.match(h.root.innerHTML,/Sign in/);
