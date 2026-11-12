@@ -148,8 +148,8 @@ def run():
         # Always-on Help describes each available section and is dismissible.
         page.locator('button[data-cmd="help-open"]').click()
         page.locator('[role="dialog"] #help-title').wait_for(timeout=8000)
-        check_label(page, "Scenario & injects")
-        page.locator('button[data-cmd="help-go"][data-tab="scenario"]').is_disabled()
+        assert page.locator('[role="dialog"] .help-entry').filter(has_text="Scenario & injects").count() == 1
+        assert page.locator('button[data-cmd="help-go"][data-tab="scenario"]').is_disabled()
         page.locator('button[data-cmd="help-close"]').first.click()
         assert page.locator('[role="dialog"]').count() == 0
 
