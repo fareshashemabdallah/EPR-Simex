@@ -54,7 +54,7 @@ async function signUp(email,password){const destination=location.origin+location
 async function resendConfirmation(email){
   if(!email||!email.includes("@"))throw Error("Enter an email address first.");
   const destination=location.origin+location.pathname+(S.invite?"?invite="+encodeURIComponent(S.invite):"");
-  await request("/auth/v1/resend",{method:"POST",auth:false,body:{type:"signup",email,options:{emailRedirectTo:destination}}});
+  await request("/auth/v1/resend?redirect_to="+encodeURIComponent(destination),{method:"POST",auth:false,body:{type:"signup",email}});
 }
 function parseEmailConfirmation(){const p=new URLSearchParams((location.hash||"").replace(/^#/,""));const token=p.get("access_token"),refresh=p.get("refresh_token");if(token&&refresh){let expires=Number(p.get("expires_in")||3600);saveSession({access_token:token,refresh_token:refresh,token_type:"bearer",expires_in:expires,expires_at:Math.floor(Date.now()/1000)+expires,user:null});history.replaceState(null,"",location.pathname+location.search);return true;}if(p.get("error_description")){S.error=p.get("error_description");history.replaceState(null,"",location.pathname+location.search);}return false;}
 async function restoreConfirmedIdentity(){if(!S.session?.access_token||S.user)return;try{const u=await request("/auth/v1/user");if(u?.id){S.session.user=u;saveSession(S.session);}}catch{saveSession(null);}}
