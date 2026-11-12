@@ -15,7 +15,7 @@ BACKEND = "rqspzcnkbftytldggezc.supabase.co"
 USER = {"id": "10000000-0000-4000-8000-000000000099", "email": "facilitator@example.org"}
 
 state = {
-    "org": False, "signup_requests": 0,
+    "org": False, "signup_requests": 0, "resend_requests": 0,
     "exercise": None,
     "teams": [], "stages": [], "injects": [], "inject_targets": [],
     "agenda_days": [], "agenda_sessions": [], "slides": [], "submissions": [],
@@ -43,6 +43,11 @@ def handler(route):
     if path == "/auth/v1/signup":
         state["signup_requests"] += 1
         response = {"user": USER}
+    elif path == "/auth/v1/resend":
+        state["resend_requests"] += 1
+        assert data["type"] == "signup", "Resend request must be signup confirmation"
+        assert data["email"] == USER["email"], "Resend target differs from registration"
+        response = {}
     elif path.startswith("/auth/v1/token"):
         response = {"user": USER, "access_token": "test-access-token",
                     "refresh_token": "test-refresh-token", "expires_in": 3600}
@@ -114,8 +119,11 @@ def run():
         page.locator('form[data-form="auth"] input[name="password"]').fill("fictional-password-only")
         page.locator('form[data-form="auth"] input[name="confirmPassword"]').fill("fictional-password-only")
         page.locator('form[data-form="auth"] button[value="signup"]').click()
-        check_label(page, "Registration request sent.")
+        check_label(page, "Registration request received.")
         assert state["signup_requests"] == 1, "Create account never called the signup endpoint"
+        page.locator('button[data-cmd="resend-confirmation"]').click()
+        check_label(page, "Supabase accepted the verification request")
+        assert state["resend_requests"] == 1, "Resend confirmation did not call the backend"
 
         page.locator('button[data-cmd="auth-mode"][data-mode="signin"]').click()
         check_label(page, "Sign in")
