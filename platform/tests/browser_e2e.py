@@ -44,6 +44,7 @@ def handler(route):
         state["signup_requests"] += 1
         response = {"user": USER}
     elif path == "/auth/v1/resend":
+        assert "redirect_to=" in u.query, "Resend email redirect URL not provided"
         state["resend_requests"] += 1
         assert data["type"] == "signup", "Resend request must be signup confirmation"
         assert data["email"] == USER["email"], "Resend target differs from registration"
