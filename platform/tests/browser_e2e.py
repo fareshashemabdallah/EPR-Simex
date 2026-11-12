@@ -15,7 +15,7 @@ BACKEND = "rqspzcnkbftytldggezc.supabase.co"
 USER = {"id": "10000000-0000-4000-8000-000000000099", "email": "facilitator@example.org"}
 
 state = {
-    "org": False, "signup_requests": 0, "resend_requests": 0,
+    "org": False, "signup_requests": 0, "resend_requests": 0, "acting_role": "director",
     "exercise": None,
     "teams": [], "stages": [], "injects": [], "inject_targets": [],
     "agenda_days": [], "agenda_sessions": [], "slides": [], "submissions": [],
@@ -72,7 +72,7 @@ def handler(route):
             response = [state["exercise"]] if state["exercise"] else []
     elif path == "/rest/v1/exercise_memberships":
         response = ([{"id": "membership-1", "exercise_id": "ex-1",
-                       "user_id": USER["id"], "role": "director"}]
+                       "user_id": USER["id"], "role": state["acting_role"]}]
                     if state["exercise"] else [])
     elif path.startswith("/rest/v1/"):
         table = path.split("/")[-1]
@@ -209,8 +209,41 @@ def run():
         check_label(page, "Emergency routes")
         page.locator('button[data-cmd="close-present"]').click()
         check_label(page, "Course programme")
+        # A participant can see assigned teams/injects and submit a decision.
+        state["team_memberships"].append({
+            "id": "team_memberships-1", "team_id": "teams-1", "exercise_id": "ex-1",
+            "org_id": "org-1", "user_id": USER["id"]
+        })
+        page.locator('button[data-cmd="signout"]').click()
+        state["acting_role"] = "participant"
+        page.locator('button[data-cmd="auth-mode"][data-mode="signin"]').click()
+        page.locator('form[data-form="auth"] input[name="email"]').fill(USER["email"])
+        page.locator('form[data-form="auth"] input[name="password"]').fill("fictional-password-only")
+        page.locator('form[data-form="auth"] button[value="signin"]').click()
+        page.locator('button[data-cmd="open"][data-id="ex-1"]').click()
+        page.locator('button[data-cmd="tab"][data-tab="responses"]').click()
+        check_label(page, "Your team's decisions")
+        assert page.locator('form[data-form="response"]').count() == 1, "Participant response form is missing"
+        page.locator('form[data-form="response"] select[name="team"]').select_option("teams-1")
+        page.locator('form[data-form="response"] select[name="inject"]').select_option("injects-1")
+        page.locator('form[data-form="response"] textarea[name="body"]').fill("Use alternate road; logistics unit responsible.")
+        page.locator('form[data-form="response"] button[value="submitted"]').click()
+        assert len(state["submissions"]) == 1, "Participant decision was not saved"
+        assert state["submissions"][0]["status"] == "submitted"
+
+        # Observers receive guidance but cannot submit team decisions.
+        page.locator('button[data-cmd="signout"]').click()
+        state["acting_role"] = "observer"
+        page.locator('button[data-cmd="auth-mode"][data-mode="signin"]').click()
+        page.locator('form[data-form="auth"] input[name="email"]').fill(USER["email"])
+        page.locator('form[data-form="auth"] input[name="password"]').fill("fictional-password-only")
+        page.locator('form[data-form="auth"] button[value="signin"]').click()
+        page.locator('button[data-cmd="open"][data-id="ex-1"]').click()
+        page.locator('button[data-cmd="tab"][data-tab="responses"]').click()
+        assert page.locator('form[data-form="response"]').count() == 0, "Observer must not submit decisions"
+        assert "Observe the exercise" in page.locator(".feature-hint").inner_text()
         assert not errors, f"Browser errors: {errors}"
-        print("PASS: Real Chromium sign-in, organization, exercise, team, inject, XSS, release, agenda, slide & presenter")
+        print("PASS: Chromium onboarding/Help, facilitator exercise, participant decisions, observer restrictions, slides and XSS checks")
         browser.close()
 
 if __name__ == "__main__":
