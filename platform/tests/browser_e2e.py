@@ -17,7 +17,7 @@ USER = {"id": "10000000-0000-4000-8000-000000000099", "email": "facilitator@exam
 state = {
     "org": False, "signup_requests": 0, "resend_requests": 0, "acting_role": "director",
     "exercise": None,
-    "teams": [], "stages": [], "injects": [], "inject_targets": [],
+    "teams": [], "team_memberships": [], "stages": [], "injects": [], "inject_targets": [],
     "agenda_days": [], "agenda_sessions": [], "slides": [], "submissions": [],
     "invitations": [], "messages": [], "reviews": [], "document_records": [], "action_items": []
 }
