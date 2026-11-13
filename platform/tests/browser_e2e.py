@@ -7,7 +7,7 @@ Run from repository root after serving files at localhost:8080:
 """
 import json
 import os
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright
 
 URL = os.environ.get("EPR_APP_URL", "http://127.0.0.1:8080/platform/")
@@ -104,8 +104,9 @@ def handler(route):
                 else:
                     response = []
             else:
-                if "id=eq." in u.query:
-                    key = u.query.split("id=eq.")[-1].split("&")[0]
+                id_filter = parse_qs(u.query).get("id",[None])[0]
+                if id_filter and id_filter.startswith("eq."):
+                    key = id_filter[3:]
                     response = [x for x in state[table] if x["id"] == key]
                 else:
                     response = state[table]
