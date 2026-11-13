@@ -7,7 +7,7 @@ const config=window.EPR_CONFIG||{};
 const base=String(config.supabaseUrl||"").trim().replace(/\/$/,"");
 const pub=String(config.publishableKey||"").trim();
 const configured=/^https:\/\/[a-z0-9.-]+\.supabase\.co$/i.test(base)&&pub.length>20&&!/service_role|sb_secret/i.test(pub);
-const S={session:null,user:null,orgs:[],org:null,exercises:[],ex:null,role:null,tab:"control",d:{},info:"",error:"",invite:new URLSearchParams(location.search).get("invite")||"",inviteUrl:"",present:null,slideIndex:0,authMode:"signup",registrationEmail:"",helpOpen:false,tourActive:null,tourStep:0,hintExpanded:false};
+const S={session:null,user:null,orgs:[],org:null,exercises:[],ex:null,role:null,tab:"control",d:{},info:"",error:"",invite:new URLSearchParams(location.search).get("invite")||"",inviteUrl:"",present:null,slideIndex:0,authMode:"signup",registrationEmail:"",helpOpen:false,tourActive:null,tourStep:0,hintExpanded:false,editor:null,deletePrompt:null};
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const lines=x=>esc(x).replace(/\r?\n/g,"<br>");
 const pill=x=>'<span class="badge '+esc(x)+'">'+esc(x)+'</span>';
@@ -76,7 +76,7 @@ function helpDialog(){
   return '<div class="help-overlay"><section role="dialog" aria-modal="true" aria-labelledby="help-title" class="help-dialog"><div class="row between"><div><span class="kicker">IN-APP USER GUIDE</span><h2 id="help-title">How EPR-Simex works</h2><p class="tiny">Your current role: '+esc(role)+' · Information shown depends on your access.</p></div><button class="btn" type="button" data-cmd="help-close">Close</button></div><p>Open a section to learn what it does. The descriptions reflect the features currently available in this development prototype.</p><div class="help-list">'+HELP_TOPICS.map(item=>'<article class="help-entry"><h3>'+esc(item.title)+'</h3><p>'+esc(item.purpose)+'</p><p class="tiny">'+esc(helpBlurb(item))+'</p><details><summary>Step-by-step guidance</summary><ol class="guide-steps">'+item.steps.map(step=>'<li>'+esc(step)+'</li>').join("")+'</ol></details><button type="button" class="btn small" data-cmd="help-go" data-tab="'+esc(item.id)+'" '+(item.id!=="home"&&!S.ex?'disabled title="Open an exercise first"':'')+'>Go to '+esc(item.id==="home"?"dashboard":"this section")+'</button></article>').join("")+'</div><div class="row between"><p class="tiny">This is a training prototype; no confidential documents or real operational response data.</p><button type="button" class="btn primary small" data-cmd="help-close">Done</button></div></section></div>';
 }
 
-function chrome(content){root.innerHTML='<div class="banner">DEVELOPMENT PROTOTYPE · SECURITY REVIEW PENDING · NO CONFIDENTIAL AGENCY DATA</div><header class="top"><div class="logo">◈ EPR-Simex <b>Platform</b></div><div class="top-actions">'+(S.user?'<span class="tiny">'+esc(S.user.email)+'</span><button class="btn small" data-cmd="home">Dashboard</button><button class="btn small" data-cmd="help-open" aria-label="Open user guide">? Help</button><button class="btn small" data-cmd="signout">Sign out</button>':'Independent humanitarian simulation system')+'</div></header><main class="wrap">'+alertMessage()+content+'</main>'+(S.user?helpDialog():"");}
+function chrome(content){root.innerHTML='<div class="banner">DEVELOPMENT PROTOTYPE · SECURITY REVIEW PENDING · NO CONFIDENTIAL AGENCY DATA</div><header class="top"><div class="logo">◈ EPR-Simex <b>Platform</b></div><div class="top-actions">'+(S.user?'<span class="tiny">'+esc(S.user.email)+'</span><button class="btn small" data-cmd="home">Dashboard</button><button class="btn small" data-cmd="help-open" aria-label="Open user guide">? Help</button><button class="btn small" data-cmd="signout">Sign out</button>':'Independent humanitarian simulation system')+'</div></header><main class="wrap">'+alertMessage()+content+'</main>'+(S.user?helpDialog()+editingOverlay()+deletionOverlay():"");}
 function configScreen(){chrome('<div class="auth card stack"><span class="kicker">Database connection required</span><h1>EPR-Simex Platform</h1><p>The shared multi-user system has not been connected to its Supabase test project. The existing READY72 demo still works separately.</p><div class="notice warn">1. Create an isolated test Supabase project.<br>2. Review and run <b>platform/sql/schema.sql</b>.<br>3. Set the public project URL and publishable key in <b>platform/config.js</b>.<br>4. Configure verified email sign-ins and redirect URL.</div><p><b>Never commit private files, service-role keys or database passwords to GitHub.</b></p><p class="muted tiny">This page intentionally does not simulate authentication or pretend to save shared exercise data.</p></div>');}
 function authScreen(){
   const signup=S.authMode==="signup";
@@ -93,6 +93,7 @@ async function request(path,opt={}){if(opt.auth!==false&&S.session?.expires_at&&
 const qry=(table,query="")=>request("/rest/v1/"+table+query);
 const insert=(table,body)=>request("/rest/v1/"+table+"?select=*",{method:"POST",headers:{Prefer:"return=representation"},body}).then(x=>x?.[0]);
 const update=(table,id,body)=>request("/rest/v1/"+table+"?id=eq."+encodeURIComponent(id)+"&select=*",{method:"PATCH",headers:{Prefer:"return=representation"},body}).then(x=>x?.[0]);
+const deleteRow=(table,id)=>request("/rest/v1/"+table+"?id=eq."+encodeURIComponent(id)+"&select=*",{method:"DELETE",headers:{Prefer:"return=representation"}}).then(x=>x?.[0]);
 const rpc=(fn,body)=>request("/rest/v1/rpc/"+fn,{method:"POST",body});
 async function refreshAuth(){let s=savedSession();if(!s){saveSession(null);return;}if(s.expires_at&&Date.now()/1000<s.expires_at-65){saveSession(s);return;}try{s=await request("/auth/v1/token?grant_type=refresh_token",{method:"POST",auth:false,body:{refresh_token:s.refresh_token}});s.expires_at=Math.floor(Date.now()/1000)+(s.expires_in||3600);saveSession(s);}catch{saveSession(null);}}
 async function signIn(email,password){let s=await request("/auth/v1/token?grant_type=password",{method:"POST",auth:false,body:{email,password}});s.expires_at=Math.floor(Date.now()/1000)+(s.expires_in||3600);saveSession(s);}
@@ -108,8 +109,107 @@ async function signOut(){try{await request("/auth/v1/logout",{method:"POST"});}c
 async function dashboard(){if(!S.user){render();return;}let memberships=await qry("org_memberships","?select=org_id,role,status,organizations(id,name)&user_id=eq."+uid()+"&status=eq.active");S.orgs=(memberships||[]).map(m=>({id:m.org_id,name:m.organizations?.name||"Organization",role:m.role}));if(!S.orgs.some(o=>o.id===orgid()))S.org=S.orgs[0]||null;S.exercises=S.org?await qry("exercises","?select=*&org_id=eq."+orgid()+"&order=created_at.desc"):[];S.ex=null;render();}
 function homeScreen(){chrome('<div class="hero"><div><span class="kicker">Organization workspaces</span><h1>Your simulation exercises</h1><p>Design and deliver full humanitarian training programmes.</p></div>'+(S.org?'<label for="org-picker">Organization</label><select id="org-picker">'+S.orgs.map(o=>'<option value="'+esc(o.id)+'" '+(o.id===orgid()?"selected":"")+'>'+esc(o.name)+'</option>').join("")+'</select>':'')+'</div>'+guidePanel()+'<div class="cols"><section class="stack"><div class="card"><h2>'+(S.org?esc(S.org.name):"No organization yet")+'</h2><p>'+(S.org?"Your role: "+esc(S.org.role):"Create your first training organization below.")+'</p></div><div class="card stack"><h2>Exercises</h2>'+(S.exercises.length?'<div class="list">'+S.exercises.map(e=>row(esc(e.title),esc(e.description||"No description"),pill(e.status)+'<button class="btn primary small" data-cmd="open" data-id="'+esc(e.id)+'">Open</button>')).join("")+'</div>':empty("No exercises are visible to this account."))+'</div></section><aside class="stack"><div class="card"><h3>Create organization</h3><form data-form="organization" class="form">'+input("name","Organization name","","text",true)+area("description","Description")+'<button class="btn primary">Create organization</button></form></div>'+(S.org&&["org_admin","facilitator"].includes(S.org.role)?'<div class="card"><h3>Build an exercise</h3><form data-form="exercise" class="form">'+input("title","Exercise title","","text",true)+area("description","Scenario background")+input("num_days","Number of training days","3","number",true)+'<button class="btn primary">Create exercise</button></form></div>':'')+'</aside></div>');}
 async function loadExercise(id,tab){let ex=S.exercises.find(e=>e.id===id)|| (await qry("exercises","?select=*&id=eq."+encodeURIComponent(id)))[0];if(!ex)throw Error("This exercise is not accessible to your account.");S.ex=ex;S.tab=tab||"control";await refreshExercise();}
-async function refreshExercise(){const id=exid();if(!id)return dashboard();const tables=["exercise_memberships","teams","team_memberships","stages","injects","inject_targets","submissions","agenda_days","agenda_sessions","slides","document_records","messages","reviews","audit_events","action_items"];const data=await Promise.all(tables.map(t=>qry(t,"?select=*&exercise_id=eq."+id+(["inject_targets","agenda_days","slides"].includes(t)?"":"&order=created_at.asc"))));S.d={};for(let k=0;k<tables.length;k++){let table=tables[k];if(Array.isArray(data[k]))S.d[table]=data[k];else S.d[table]=[];}S.role=(S.d.exercise_memberships.find(m=>m.user_id===uid())||{}).role||null;const exRow=(await qry("exercises","?select=*&id=eq."+id))[0];if(exRow)S.ex=exRow;render();}
+async function refreshExercise(){const id=exid();if(!id)return dashboard();const tables=["exercise_memberships","teams","team_memberships","stages","injects","inject_targets","submissions","agenda_days","agenda_sessions","slides","private_notes","document_records","messages","reviews","audit_events","action_items","invitations"];const data=await Promise.all(tables.map(t=>qry(t,"?select=*&exercise_id=eq."+id+(["inject_targets","agenda_days","slides"].includes(t)?"":"&order=created_at.asc"))));S.d={};for(let k=0;k<tables.length;k++){let table=tables[k];if(Array.isArray(data[k]))S.d[table]=data[k];else S.d[table]=[];}S.role=(S.d.exercise_memberships.find(m=>m.user_id===uid())||{}).role||null;const exRow=(await qry("exercises","?select=*&id=eq."+id))[0];if(exRow)S.ex=exRow;render();}
 const d=(key)=>S.d[key]||[];
+
+// Explicit per-table fields: IDs, tenant ownership, membership, and audit columns are never editable.
+const EDIT_FIELDS={
+  organizations:[["name","Organization name","text",true],["description","Description","textarea"]],
+  exercises:[["title","Exercise title","text",true],["description","Scenario background","textarea"],["objectives","Learning objectives","textarea"],["scenario_summary","Scenario summary","textarea"],["num_days","Number of days","number",true]],
+  teams:[["name","Group name","text",true],["kind","Group type","select",true,[["team","Participant team"],["support_cell","Support cell"]]],["description","Purpose / assignment","textarea"]],
+  stages:[["name","Stage title","text",true],["code","Time label","text"],["description","Situation context","textarea"]],
+  injects:[["title","Inject title","text",true],["stage_id","Scenario stage","stage",true],["body","Situation update","textarea"],["response_prompt","Required team decision","textarea"]],
+  agenda_days:[["day_number","Day number","number",true],["title","Training day title","text",true]],
+  agenda_sessions:[["day_id","Training day","day",true],["title","Session title","text",true],["session_type","Session type","select",true,[["presentation","Presentation"],["exercise","Exercise"],["debrief","Debrief"],["break","Break"],["other","Other"]]],["start_time","Start time","time"],["end_time","End time","time"],["learning_objectives","Learning objectives","textarea"],["instructions","Facilitator instructions","textarea"]],
+  slides:[["title","Slide title","text",true],["body","Slide content","textarea"],["notes","Private speaker notes","textarea"]],
+  document_records:[["title","Document title","text",true],["description","Description","textarea"],["category","Category","text"],["version","Version","text"],["visibility","Who can view?","select",true,[["facilitators","Facilitators only"],["exercise","Everyone in exercise"],["team","Selected team"]]],["team_id","Team (only if team visibility)","team"],["url","HTTPS link","url"]],
+  submissions:[["body","Your team's decision / rationale","textarea",true]],
+  action_items:[["action","Recommended improvement","textarea",true],["owner_name","Responsible owner","text"],["horizon","Follow-up horizon","select",true,[["30","30 days"],["60","60 days"],["90","90 days"]]]]
+};
+const DISPLAY_NAMES={organizations:"organization",exercises:"exercise",teams:"team / support cell",stages:"stage",injects:"scenario inject",agenda_days:"training day",agenda_sessions:"training session",slides:"presentation slide",document_records:"reference document",submissions:"decision draft",action_items:"AAR action",invitations:"invitation"};
+function canEditRecord(table,x){
+  if(!x||!S.user)return false;
+  if(table==="organizations")return S.orgs.some(o=>o.id===x.id&&o.role==="org_admin");
+  if(table==="exercises")return (S.ex?.id===x.id&&staff())||x.created_by===uid();
+  if(table==="submissions")return S.role==="participant"&&teamIds().has(x.team_id)&&["draft","returned"].includes(x.status);
+  if(table==="injects")return staff()&&x.status!=="released";
+  if(table==="document_records")return staff();
+  return !!EDIT_FIELDS[table]&&staff();
+}
+function canDeleteRecord(table,x){
+  if(!x||!S.user)return false;
+  if(table==="organizations")return S.orgs.some(o=>o.id===x.id&&o.role==="org_admin");
+  if(table==="exercises")return x.created_by===uid()&&x.status==="draft";
+  if(table==="submissions")return S.role==="participant"&&teamIds().has(x.team_id)&&x.status==="draft"&&x.updated_by===uid();
+  if(table==="injects")return staff()&&x.status==="draft";
+  if(table==="document_records")return staff()&&(x.kind!=="file"||x.owner_id===uid());
+  if(table==="invitations")return staff()&&x.status==="pending";
+  return ["teams","stages","agenda_days","agenda_sessions","slides","action_items"].includes(table)&&staff();
+}
+function recordActions(table,x){
+  const edit=canEditRecord(table,x),del=canDeleteRecord(table,x);
+  return (edit?'<button class="btn small" data-cmd="edit-record" data-table="'+esc(table)+'" data-id="'+esc(x.id)+'" type="button">Edit</button>':"")+
+  (del?'<button class="btn small danger-outline" data-cmd="delete-record" data-table="'+esc(table)+'" data-id="'+esc(x.id)+'" type="button">'+(table==="invitations"?"Revoke":"Delete")+'</button>':"");
+}
+function editFields(table,row){
+  let fs=EDIT_FIELDS[table]||[];
+  if(table==="document_records"&&row.kind!=="link")fs=fs.filter(f=>f[0]!=="url");
+  return fs.map(([key,label,type,required,options])=>{
+    const value=key==="notes"?(d("private_notes").find(n=>n.subject_type==="slide"&&n.subject_id===row.id)?.body||""):(row[key]??"");
+    const id="editing-"+key, req=required?" required":"";
+    let items=options;
+    if(type==="stage")items=d("stages").map(x=>[x.id,x.name]);
+    if(type==="day")items=d("agenda_days").map(x=>[x.id,"Day "+x.day_number+" · "+x.title]);
+    if(type==="team")items=[["","No team"],...d("teams").map(x=>[x.id,x.name])];
+    let html="";
+    if(type==="textarea")html='<textarea rows="4" id="'+id+'" name="'+esc(key)+'"'+req+'>'+esc(value)+'</textarea>';
+    else if(items)html='<select name="'+esc(key)+'" id="'+id+'"'+req+'>'+items.map(([v,l])=>'<option value="'+esc(v)+'"'+(String(v)===String(value)?' selected':'')+'>'+esc(l)+'</option>').join("")+'</select>';
+    else html='<input id="'+id+'" name="'+esc(key)+'" type="'+esc(type)+'" value="'+esc(value)+'"'+(type==="number"?' min="1" max="30"':'')+req+'>';
+    return '<label for="'+id+'">'+esc(label)+'</label>'+html;
+  }).join("");
+}
+function editingOverlay(){
+  if(!S.editor)return "";
+  const {table,record}=S.editor,label=DISPLAY_NAMES[table]||table;
+  return '<div class="help-overlay edit-overlay"><section class="help-dialog edit-dialog" role="dialog" aria-modal="true" aria-labelledby="editing-title">'+
+   '<div class="row between"><div><span class="kicker">EDIT EXISTING RECORD</span><h2 id="editing-title">Edit '+esc(label)+'</h2><p class="tiny">Changes are saved to your exercise workspace. Only authorized roles may edit.</p></div><button class="btn small" type="button" data-cmd="edit-cancel">Close</button></div>'+
+   '<form class="form edit-fields" data-form="edit-record">'+editFields(table,record)+'<div class="row"><button class="btn primary" type="submit">Save changes</button><button class="btn" type="button" data-cmd="edit-cancel">Cancel</button></div></form></section></div>';
+}
+function deleteDependencies(table,row){
+  if(table==="teams"){
+    const counts=[
+      d("team_memberships").some(x=>x.team_id===row.id),
+      d("inject_targets").some(x=>x.team_id===row.id),
+      d("submissions").some(x=>x.team_id===row.id),
+      d("messages").some(x=>x.team_id===row.id||x.to_team_id===row.id),
+      d("document_records").some(x=>x.team_id===row.id),
+      d("invitations").some(x=>x.team_id===row.id&&x.status==="pending")
+    ];
+    if(counts.some(Boolean))return "This team still has members, inject assignments, responses, messages, references or pending invitations. Remove those links first.";
+  }
+  if(table==="stages"&&(d("injects").some(x=>x.stage_id===row.id)||d("agenda_sessions").some(x=>x.stage_id===row.id)||S.ex?.current_stage_id===row.id))return "This stage is in use. Reassign its injects and sessions before deleting.";
+  if(table==="agenda_days"&&d("agenda_sessions").some(x=>x.day_id===row.id))return "This day still contains sessions. Delete or move those sessions first.";
+  if(table==="agenda_sessions"&&(d("slides").some(x=>x.session_id===row.id)||d("document_records").some(x=>x.session_id===row.id)))return "This session still contains slides or references. Move or delete those first.";
+  return "";
+}
+function deletionOverlay(){
+  if(!S.deletePrompt)return "";
+  const {table,record}=S.deletePrompt;
+  const title=record.title||record.name||record.action||record.email||"this item";
+  const blocked=deleteDependencies(table,record),big=["organizations","exercises"].includes(table);
+  const isFile=table==="document_records"&&record.kind==="file";
+  const msg=table==="organizations"?"Only empty organizations can be deleted. All invitations and exercises must be removed first.":
+  table==="exercises"?"Only your own draft exercises without collaborators, submitted responses, messages or uploaded files can be deleted. This also removes all remaining draft stages, teams and training material.":
+  table==="invitations"?"Revoke this invitation? The link will stop working, but any access already accepted is not removed.":
+  table==="submissions"?"Delete this unsent draft? Submitted decisions are retained for exercise accountability.":
+  isFile?"The stored file will be deleted from private storage before the reference entry is removed. This cannot be undone.":
+  "This record will be permanently deleted. Related data may be affected; review the warning below.";
+  return '<div class="help-overlay edit-overlay"><section class="help-dialog edit-dialog" role="dialog" aria-modal="true" aria-labelledby="deleting-title"><span class="kicker">PLEASE CONFIRM</span><h2 id="deleting-title">'+(table==="invitations"?"Revoke invitation":"Delete "+esc(DISPLAY_NAMES[table]||table))+'</h2><p><b>'+esc(title)+'</b></p><p>'+esc(msg)+'</p>'+
+   (blocked?'<p class="notice error">'+esc(blocked)+'</p>':"")+
+   '<form class="form" data-form="delete-record">'+(big?'<label for="delete-confirm">Type the exact name to confirm</label><input id="delete-confirm" name="confirmation" required autocomplete="off" placeholder="'+esc(title)+'">':"")+
+   '<div class="row"><button class="btn '+(blocked?'':'danger')+'" type="submit"'+(blocked?' disabled':'')+'>'+(table==="invitations"?"Revoke invitation":"Delete permanently")+'</button><button type="button" class="btn" data-cmd="delete-cancel">Cancel</button></div></form></section></div>';
+}
+
 function exerciseScreen(){const ex=S.ex;const tabs=[["control",staff()?"Live control":"Briefing"],["scenario","Scenario & injects"],["teams","Teams"],["agenda","Training studio"],["library","Document library"],["responses","Decisions"],["messages","Messages"],["review","Evaluation & AAR"]];let body=({control:tabControl,scenario:tabScenario,teams:tabTeams,agenda:tabAgenda,library:tabLibrary,responses:tabResponses,messages:tabMessages,review:tabReview}[S.tab]||tabControl)();chrome('<div class="hero"><div><button class="link tiny" data-cmd="home">← Organizations</button><span class="kicker">Exercise workspace</span><h1>'+esc(ex.title)+'</h1><p>'+esc(ex.description||"Configure a simulation scenario and learning agenda.")+'</p></div><div class="row">'+pill(ex.status)+pill(S.role||"not assigned")+'<button class="btn small" data-cmd="refresh">Refresh</button></div></div><nav class="tabs" aria-label="Exercise sections">'+tabs.map(x=>navButton(x[0],x[1])).join("")+'</nav>'+guidePanel()+featureHint()+body);}
 function tabControl(){let submissionCount=d("submissions").filter(s=>s.status==="submitted").length;let active=d("injects").filter(i=>i.status==="released").length;let cards=[["Teams",d("teams").length],["Published injects",active],["Submissions",submissionCount]];return '<div class="grid">'+cards.map(x=>'<div class="card"><div class="muted">'+x[0]+'</div><div class="stat">'+x[1]+'</div></div>').join("")+'</div><div class="cols" style="margin-top:1rem"><div class="card stack"><h2>'+(staff()?"Facilitator control room":"Participant situation board")+'</h2>'+(staff()?'<p>Release injects from the scenario tab. Exercise status transitions are recorded by the backend.</p><div class="row">'+actionsFor(S.ex.status).map(x=>'<button class="btn primary small" data-cmd="status" data-status="'+x+'">'+esc(x==="live"?"▶ Start / resume":x)+'</button>').join("")+'</div>':'<p>Only authorized, released injects should appear here. Decisions are recorded under Decisions.</p><div class="notice">My team: '+esc(teamsMine().map(x=>x.name).join(", ")||"Not assigned")+'</div>')+'<h3>Situation updates</h3>'+(d("injects").length?d("injects").map(i=>row(esc(i.title),esc(i.body).slice(0,260),pill(i.status))).join(""):empty("No visible injects."))+'</div><aside class="card stack"><h2>Stages</h2>'+(d("stages").length?d("stages").map(s=>row(esc(s.name),esc(s.description),'<span class="badge">'+esc(s.code)+'</span>')).join(""):empty("No stages configured."))+'</aside></div>';}
 function tabScenario(){let ss=d("stages"), ts=d("teams"), ii=d("injects");return '<div class="cols"><section class="stack"><div class="card"><h2>Scenario timeline</h2>'+(ss.length?ss.map(s=>row(esc(s.name),esc(s.description),pill(s.code))).join(""):empty("Build your first stage."))+'</div><div class="card"><h2>Information injects</h2>'+(ii.length?ii.map(i=>row(esc(i.title),lines(i.body)+'<p><b>Team response:</b> '+esc(i.response_prompt||"No response requested")+'</p><p class="tiny muted">Target groups: '+esc(d("inject_targets").filter(t=>t.inject_id===i.id).map(t=>ts.find(v=>v.id===t.team_id)?.name).filter(Boolean).join(", ")||"None")+'</p>',pill(i.status)+(staff()&&i.status==="draft"?'<button class="btn primary small" data-cmd="release" data-id="'+esc(i.id)+'">Release</button>':""))).join(""):empty("No injects have been created."))+'</div></section>'+(staff()?'<aside class="stack"><div class="card"><h3>Create stage</h3><form data-form="stage" class="form">'+input("name","Stage name (e.g., H0 ACTIVATE)","","text",true)+input("code","Time label (e.g., H0)")+area("description","Situation context")+'<button class="btn primary">Add stage</button></form></div><div class="card"><h3>Draft scenario inject</h3><form data-form="inject" class="form">'+select("stage","Stage",ss,"name")+input("title","Inject title","","text",true)+area("body","Situation update")+area("prompt","Decision or deliverable required")+'<label>Recipients</label><select name="target"><option value="all">All participant teams</option>'+ts.filter(t=>t.kind==="team").map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join("")+'</select><button class="btn primary">Save inject as draft</button></form></div></aside>':'')+'</div>';}
