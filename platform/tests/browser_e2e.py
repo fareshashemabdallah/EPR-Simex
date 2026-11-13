@@ -327,7 +327,7 @@ def run():
         page.locator('button[data-cmd="open"][data-id="ex-1"]').click()
         page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="responses"]').click()
         assert page.locator('form[data-form="response"]').count() == 0, "Observer must not submit decisions"
-        assert "Evidence" in page.locator(".feature-hint").inner_text()||"observation" in page.locator(".feature-hint").inner_text().lower()
+        assert "evidence" in page.locator(".feature-hint").inner_text().lower() or "observation" in page.locator(".feature-hint").inner_text().lower()
         page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="review"]').click()
         page.locator('form[data-form="observation"] select[name="team"]').select_option("teams-1")
         page.locator('form[data-form="observation"] select[name="rating"]').select_option("4")
