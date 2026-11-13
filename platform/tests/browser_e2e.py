@@ -314,7 +314,7 @@ def run():
         page.locator('form[data-form="response"] select[name="inject"]').select_option("injects-1")
         page.locator('form[data-form="response"] textarea[name="body"]').fill("Use alternate road; logistics unit responsible.")
         page.locator('form[data-form="response"] button[value="submitted"]').click()
-        check_label(page, "Decision submitted.")
+        check_label(page, "decision has been submitted.")
         assert len(state["submissions"]) == 1, "Participant decision was not saved"
         assert state["submissions"][0]["status"] == "submitted"
         assert page.locator('button[data-cmd="delete-record"][data-table="submissions"]').count() == 0, "Submitted evidence must be locked"
