@@ -19,7 +19,7 @@ state = {
     "exercise": None,
     "teams": [], "team_memberships": [], "stages": [], "injects": [], "inject_targets": [],
     "agenda_days": [], "agenda_sessions": [], "slides": [], "private_notes": [], "submissions": [],
-    "invitations": [], "messages": [], "reviews": [], "document_records": [], "action_items": []
+    "invitations": [], "messages": [], "reviews": [], "document_records": [], "action_items": [], "observations": []
 }
 
 def handler(route):
@@ -243,7 +243,17 @@ def run():
         page.locator('form[data-form="day"] button').click()
         page.locator('form[data-form="session"] select[name="day"]').select_option("agenda_days-1")
         page.locator('form[data-form="session"] input[name="title"]').fill("Supply readiness")
+        page.locator('form[data-form="session"] select[name="stage"]').select_option("stages-1")
+        page.locator('form[data-form="session"] textarea[name="objectives"]').fill("Identify a feasible alternative supply route")
+        page.locator('form[data-form="session"] textarea[name="notes"]').fill("Facilitator confidential discussion prompt")
         page.locator('form[data-form="session"] button').click()
+        assert state["agenda_sessions"][0]["stage_id"]=="stages-1"
+        assert any(n["subject_type"]=="session" and "confidential" in n["body"] for n in state["private_notes"])
+        page.locator('button[data-cmd="session-challenge"]').click()
+        check_label(page, "Showing related practice")
+        page.locator('button[data-cmd="show-all-events"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="agenda"]').click()
+        check_label(page, "Supply readiness")
         page.locator('form[data-form="slide"] select[name="session"]').select_option("agenda_sessions-1")
         page.locator('form[data-form="slide"] input[name="title"]').fill("Emergency routes")
         page.locator('form[data-form="slide"] button').click()
@@ -278,7 +288,10 @@ def run():
         page.locator('form[data-form="auth"] input[name="password"]').fill("fictional-password-only")
         page.locator('form[data-form="auth"] button[value="signin"]').click()
         page.locator('button[data-cmd="open"][data-id="ex-1"]').click()
-        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="responses"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="agenda"]').click()
+        assert "Facilitator confidential discussion prompt" not in page.locator("main").inner_text()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="control"]').click()
+        page.locator('button[data-cmd="start-decision"]').first.click()
         check_label(page, "Your team's decisions")
         assert page.locator('form[data-form="response"]').count() == 1, "Participant response form is missing"
         page.locator('form[data-form="response"] select[name="team"]').select_option("teams-1")
@@ -315,6 +328,14 @@ def run():
         page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="responses"]').click()
         assert page.locator('form[data-form="response"]').count() == 0, "Observer must not submit decisions"
         assert "Observe the exercise" in page.locator(".feature-hint").inner_text()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="review"]').click()
+        page.locator('form[data-form="observation"] select[name="team"]').select_option("teams-1")
+        page.locator('form[data-form="observation"] select[name="rating"]').select_option("4")
+        page.locator('form[data-form="observation"] textarea[name="note"]').fill("Team considered alternative routing before choosing.")
+        page.locator('form[data-form="observation"] button').click()
+        assert len(state["observations"]) == 1, "Evaluator observation not stored"
+        assert state["observations"][0]["competency"] == "Decision quality"
+        check_label(page, "Evidence from observers")
         assert not errors, f"Browser errors: {errors}"
         print("PASS: Chromium onboarding/Help, facilitator exercise, participant decisions, observer restrictions, slides and XSS checks")
         browser.close()
