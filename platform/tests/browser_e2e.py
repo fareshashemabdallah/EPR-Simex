@@ -289,9 +289,11 @@ def run():
         page.locator('button[data-cmd="edit-record"][data-table="submissions"]').click()
         page.locator('form[data-form="edit-record"] textarea[name="body"]').fill("Revised draft route")
         page.locator('form[data-form="edit-record"] button[type="submit"]').click()
+        check_label(page,"decision draft updated successfully.")
         assert state["submissions"][0]["body"] == "Revised draft route", "Participant draft edit failed"
         page.locator('button[data-cmd="delete-record"][data-table="submissions"]').click()
         page.locator('form[data-form="delete-record"] button[type="submit"]').click()
+        check_label(page,"decision draft deleted.")
         assert len(state["submissions"]) == 0, "Participant draft deletion failed"
         page.locator('form[data-form="response"] select[name="team"]').select_option("teams-1")
         page.locator('form[data-form="response"] select[name="inject"]').select_option("injects-1")
