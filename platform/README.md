@@ -19,7 +19,7 @@ This branch adds an isolated, no-build frontend at `platform/index.html` plus a 
 ## Reproduce the test database (new test Supabase project only)
 
 1. Use a dedicated, empty Supabase **test** project. The first test project is already created; do **not** rerun initial `schema.sql` against it.
-2. On a NEW empty test database, carefully review and apply, **in order**, `platform/sql/schema.sql`, `002_restrict_function_permissions.sql`, `003_fix_cross_exercise_messages_and_inject_returning.sql`, `004_guard_document_and_invitation_scopes.sql`, `005_fix_document_insert_returning.sql`, and `006_move_rls_helpers_to_private_schema.sql`. These are development migrations, not production certifications.
+2. On a NEW empty test database, carefully review and apply, **in order**, `platform/sql/schema.sql`, `002_restrict_function_permissions.sql`, `003_fix_cross_exercise_messages_and_inject_returning.sql`, `004_guard_document_and_invitation_scopes.sql`, `005_fix_document_insert_returning.sql`, `006_move_rls_helpers_to_private_schema.sql`, and `007_scoped_edit_delete_and_parent_safeguards.sql`. These are development migrations, not production certifications.
 3. Confirm Email authentication and email verification are enabled; set an approved test site URL and redirect paths in Supabase Auth. Production authentication settings have not been verified from a real browser.
 4. Set the project URL and **publishable** key in `platform/config.js` for the intended test deployment. Never add service_role, sb_secret, passwords, or JWT signing secrets.
 5. Keep GitHub Pages on **main** for READY72. To try the development branch locally, clone/check out `development/secure-platform` and run a static HTTP server, then open `/platform/` in the browser. Do not switch the production Pages source.
@@ -49,6 +49,17 @@ The default Supabase mailer may have low delivery quotas; configure an approved 
 
 The published preview has passed GitHub Pages reachability checks and local Chromium exercises with **synthetic intercepted backend responses**. Those are distinct from full live email verification and user-session tests.
 
+## Edit and delete features (November 13, 2026)
+
+For authorized users, **Edit** and **Delete** appear alongside organizations, draft exercises, teams, stages, scenario injects, training days/sessions/slides, document records, draft decisions and after-action improvement actions. Pending invitations can be **Revoked**. Released injects, sent messages, submitted/accepted decisions and historical reviews are retained to preserve exercise evidence.
+
+- **Editing:** Open the item, select **Edit**, change permitted fields and select **Save changes**. A draft inject's recipient team(s) can also be changed.
+- **Deleting:** Select **Delete** and review the confirmation. For organizations and exercises, type the exact name to confirm. Only the organization creator can delete an empty organization. Only the original exercise director can delete their own draft exercise when it has no collaborators, submissions, messages or uploaded files. Deleting the draft exercise also deletes its remaining preparatory content.
+- **Safety:** A team, stage, training day or session cannot be deleted while it contains references or dependent work. Remove or reassign those records first. Draft injects are deletable; released injects cannot be deleted or recalled. Unsent team decisions may be revised or deleted; submitted/accepted decisions are preserved.
+- **Documents:** Staff may edit metadata. Reference links may be deleted; stored files can only be removed by the original uploader, via the Storage API before deleting the document entry. Never remove Storage metadata directly with SQL.
+- **Invitations:** Revoking a **pending** invitation invalidates that link. Revoking an invitation that has already been accepted does not remove an existing account's membership.
+- **Testing:** The user interface has automated Chromium tests with fictional intercepted backend responses. Synthetic RLS checks in `platform/tests/rls_edit_delete.sql` passed against the real test database and rolled back. Real-account UAT and storage cleanup still need live verification.
+
 ## Security verification is a release blocker
 
 Use `platform/tests/UAT.md`. Test at least **two different organizations and two different participant teams** with distinct real verified accounts on separate browsers. Specifically test direct API calls for cross-tenant data, unreleased injects, facilitator-only notes, upload/download object access, role escalation, unexpected state transitions, invite redemption and repeat use.
@@ -59,7 +70,7 @@ Before real agency adoption: complete threat modeling, database/RLS and API adve
 
 ## Future work
 
-- Full content editor and speaker-notes UI; supervised PPTX-to-slide conversion
+- Rich content editor and supervised PPTX-to-slide conversion (basic slide and private speaker-note editing is now available)
 - Scheduled injects with reliable delivery, websocket-style realtime, team workspaces and controlled peer collaboration
 - Rich evaluation rubric, comprehensive AAR exports and versioned scenario templates
 - Provider tenancy administration, audit dashboards, operations telemetry and incident response
