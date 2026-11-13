@@ -52,3 +52,9 @@ jobs:
         env:
           EPR_APP_URL: https://fareshashemabdallah.github.io/EPR-Simex/preview/
         run: python platform/tests/browser_e2e.py
+      - name: Verify creator-controlled draft delete with protected decisions (local)
+        run: python platform/tests/browser_delete_flow.py
+      - name: Verify creator-controlled draft delete on public preview (synthetic)
+        env:
+          EPR_APP_URL: https://fareshashemabdallah.github.io/EPR-Simex/preview/
+        run: python platform/tests/browser_delete_flow.py
