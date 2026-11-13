@@ -118,7 +118,7 @@ const EDIT_FIELDS={
   exercises:[["title","Exercise title","text",true],["description","Scenario background","textarea"],["objectives","Learning objectives","textarea"],["scenario_summary","Scenario summary","textarea"],["num_days","Number of days","number",true]],
   teams:[["name","Group name","text",true],["kind","Group type","select",true,[["team","Participant team"],["support_cell","Support cell"]]],["description","Purpose / assignment","textarea"]],
   stages:[["name","Stage title","text",true],["code","Time label","text"],["description","Situation context","textarea"]],
-  injects:[["title","Inject title","text",true],["stage_id","Scenario stage","stage",true],["body","Situation update","textarea"],["response_prompt","Required team decision","textarea"]],
+  injects:[["title","Inject title","text",true],["stage_id","Scenario stage","stage",true],["body","Situation update","textarea"],["response_prompt","Required team decision","textarea"],["recipients","Recipient teams","recipients"]],
   agenda_days:[["day_number","Day number","number",true],["title","Training day title","text",true]],
   agenda_sessions:[["day_id","Training day","day",true],["title","Session title","text",true],["session_type","Session type","select",true,[["presentation","Presentation"],["exercise","Exercise"],["debrief","Debrief"],["break","Break"],["other","Other"]]],["start_time","Start time","time"],["end_time","End time","time"],["learning_objectives","Learning objectives","textarea"],["instructions","Facilitator instructions","textarea"]],
   slides:[["title","Slide title","text",true],["body","Slide content","textarea"],["notes","Private speaker notes","textarea"]],
@@ -158,6 +158,7 @@ function editFields(table,row){
     const value=key==="notes"?(d("private_notes").find(n=>n.subject_type==="slide"&&n.subject_id===row.id)?.body||""):(row[key]??"");
     const id="editing-"+key, req=required?" required":"";
     let items=options;
+    if(type==="recipients")items=[["keep","Keep existing recipient teams"],["all","All participant teams"],...d("teams").filter(t=>t.kind==="team").map(t=>[t.id,t.name])];
     if(type==="stage")items=d("stages").map(x=>[x.id,x.name]);
     if(type==="day")items=d("agenda_days").map(x=>[x.id,"Day "+x.day_number+" · "+x.title]);
     if(type==="team")items=[["","No team"],...d("teams").map(x=>[x.id,x.name])];
@@ -257,7 +258,7 @@ async function saveEditor(form){
   for(const [key,_,type,required] of editableFields(table,record)){
     const v=String(fd.get(key)??"").trim();
     if(required&&!v)throw Error("Please complete the required field: "+key.replace(/_/g," ")+".");
-    if(key==="notes")continue; // speaker notes are stored separately from slide content
+    if(key==="notes"||key==="recipients")continue; // stored in their dedicated resource tables
     if(type==="number"){
       const n=Number(v);if(!Number.isInteger(n)||n<1||n>30)throw Error("A positive number between 1 and 30 is required.");
       patch[key]=n;continue;
@@ -280,6 +281,21 @@ async function saveEditor(form){
   }
   const outcome=await update(table,id,patch);
   if(!outcome)throw Error("Nothing was updated. Your permissions or the record may have changed; refresh the page.");
+  if(table==="injects"){
+    const requested=String(fd.get("recipients")||"keep");
+    if(requested!=="keep"){
+      const wanted=requested==="all"?d("teams").filter(t=>t.kind==="team").map(t=>t.id):[requested];
+      if(!wanted.length||wanted.some(id=>!d("teams").some(t=>t.id===id&&t.kind==="team")))throw Error("Select a valid participant team.");
+      const existing=d("inject_targets").filter(x=>x.inject_id===id);
+      for(const team of wanted.filter(t=>!existing.some(x=>x.team_id===t))){
+        await insert("inject_targets",{org_id:orgid(),exercise_id:exid(),inject_id:id,team_id:team});
+      }
+      for(const target of existing.filter(x=>!wanted.includes(x.team_id))){
+        const removed=await deleteRow("inject_targets",target.id);
+        if(!removed)throw Error("Inject edited but old team targets could not be removed. Refresh and review recipients.");
+      }
+    }
+  }
   if(table==="slides"){
     const noteText=String(fd.get("notes")||"").trim();
     const oldNote=d("private_notes").find(n=>n.subject_type==="slide"&&n.subject_id===id);
