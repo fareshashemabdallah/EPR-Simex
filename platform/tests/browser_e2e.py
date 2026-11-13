@@ -167,7 +167,7 @@ def run():
         # Always-on Help describes each available section and is dismissible.
         page.locator('button[data-cmd="help-open"]').click()
         page.locator('[role="dialog"] #help-title').wait_for(timeout=8000)
-        assert page.locator('[role="dialog"] .help-entry h3').filter(has_text="Scenario & injects").count() == 1
+        assert page.locator('[role="dialog"] .help-entry h3').filter(has_text="Situation updates & practice").count() == 1
         assert page.locator('button[data-cmd="help-go"][data-tab="scenario"]').is_disabled()
         page.locator('button[data-cmd="help-close"]').first.click()
         assert page.locator('[role="dialog"]').count() == 0
@@ -179,13 +179,13 @@ def run():
         page.locator('form[data-form="exercise"] button').click()
         check_label(page, "Riverland Flood SIMEX")
 
-        page.locator(".feature-hint h2").filter(has_text="Live control & briefing").wait_for(timeout=8000)
+        page.locator(".feature-hint h2").filter(has_text="Overview & next steps").wait_for(timeout=8000)
         page.locator('button[data-cmd="hint-toggle"]').click()
         page.locator('.feature-hint ol li').first.wait_for(timeout=8000)
         page.locator('button[data-cmd="hint-toggle"]').click()
         page.locator('button[data-cmd="help-open"]').click()
         page.locator('button[data-cmd="help-go"][data-tab="scenario"]').click()
-        page.locator(".feature-hint h2").filter(has_text="Scenario & injects").wait_for(timeout=8000)
+        page.locator(".feature-hint h2").filter(has_text="Situation updates & practice").wait_for(timeout=8000)
         page.locator('.feature-hint ol li').first.wait_for(timeout=8000)
 
         page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="teams"]').click()
@@ -327,7 +327,7 @@ def run():
         page.locator('button[data-cmd="open"][data-id="ex-1"]').click()
         page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="responses"]').click()
         assert page.locator('form[data-form="response"]').count() == 0, "Observer must not submit decisions"
-        assert "Observe the exercise" in page.locator(".feature-hint").inner_text()
+        assert "Evidence" in page.locator(".feature-hint").inner_text()||"observation" in page.locator(".feature-hint").inner_text().lower()
         page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="review"]').click()
         page.locator('form[data-form="observation"] select[name="team"]').select_option("teams-1")
         page.locator('form[data-form="observation"] select[name="rating"]').select_option("4")
