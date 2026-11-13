@@ -113,3 +113,11 @@
  .teaching-card{padding:.8rem}
  .workspace-nav{margin-left:-.2rem;margin-right:-.2rem}
 }
+
+/* Simplified training dashboard */
+.exercise-list-item{display:flex;gap:1rem;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:.85rem .15rem;border-bottom:1px solid #e9eff3}
+.exercise-list-item:last-child{border-bottom:0}
+.exercise-list-item>div:first-child{flex:1;min-width:160px}
+.exercise-list-item p{font-size:.83rem;margin:.3rem 0;color:#677a89}
+.exercise-list-item .row{gap:.45rem}
+@media(max-width:700px){.exercise-list-item{align-items:start}}
