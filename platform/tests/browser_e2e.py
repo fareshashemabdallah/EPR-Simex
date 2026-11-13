@@ -258,6 +258,7 @@ def run():
         page.locator('form[data-form="slide"] select[name="session"]').select_option("agenda_sessions-1")
         page.locator('form[data-form="slide"] input[name="title"]').fill("Emergency routes")
         page.locator('form[data-form="slide"] button').click()
+        page.locator('details.slides-details summary').click()
         page.locator('button[data-cmd="edit-record"][data-table="slides"]').click()
         page.locator('form[data-form="edit-record"] input[name="title"]').fill("Emergency routes revised")
         page.locator('form[data-form="edit-record"] button[type="submit"]').click()
