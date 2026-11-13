@@ -188,7 +188,7 @@ def run():
         page.locator(".feature-hint h2").filter(has_text="Scenario & injects").wait_for(timeout=8000)
         page.locator('.feature-hint ol li').first.wait_for(timeout=8000)
 
-        page.locator('button[data-cmd="tab"][data-tab="teams"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="teams"]').click()
         page.locator('form[data-form="team"] input[name="name"]').fill("Team Alpha")
         page.locator('form[data-form="team"] button').click()
         check_label(page, "Team Alpha")
@@ -206,7 +206,7 @@ def run():
         assert len(state["teams"])==1, "Disposable team did not delete"
 
 
-        page.locator('button[data-cmd="tab"][data-tab="scenario"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="scenario"]').click()
         page.locator('form[data-form="stage"] input[name="name"]').fill("H0 Activate")
         page.locator('form[data-form="stage"] button').click()
         check_label(page, "H0 Activate")
@@ -230,15 +230,15 @@ def run():
         assert page.locator("main img").count() == 0, "XSS: inject content rendered as HTML"
         assert page.evaluate("window.__executed === undefined"), "XSS event executed"
 
-        page.locator('button[data-cmd="tab"][data-tab="control"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="control"]').click()
         page.locator('button[data-cmd="status"][data-status="published"]').click()
         page.locator('button[data-cmd="status"][data-status="live"]').click()
-        page.locator('button[data-cmd="tab"][data-tab="scenario"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="scenario"]').click()
         page.locator('button[data-cmd="release"]').click()
         check_label(page, "released")
         assert state["injects"][0]["status"] == "released", "Release status not saved"
 
-        page.locator('button[data-cmd="tab"][data-tab="agenda"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="agenda"]').click()
         page.locator('form[data-form="day"] input[name="title"]').fill("Day 1 preparedness")
         page.locator('form[data-form="day"] button').click()
         page.locator('form[data-form="session"] select[name="day"]').select_option("agenda_days-1")
@@ -255,7 +255,7 @@ def run():
         check_label(page, "Emergency routes revised")
         page.locator('button[data-cmd="close-present"]').click()
         check_label(page, "Course programme")
-        page.locator('button[data-cmd="tab"][data-tab="review"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="review"]').click()
         page.locator('form[data-form="action"] textarea[name="action"]').fill("Replace outdated contingency maps")
         page.locator('form[data-form="action"] button').click()
         page.locator('button[data-cmd="edit-record"][data-table="action_items"]').click()
@@ -278,7 +278,7 @@ def run():
         page.locator('form[data-form="auth"] input[name="password"]').fill("fictional-password-only")
         page.locator('form[data-form="auth"] button[value="signin"]').click()
         page.locator('button[data-cmd="open"][data-id="ex-1"]').click()
-        page.locator('button[data-cmd="tab"][data-tab="responses"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="responses"]').click()
         check_label(page, "Your team's decisions")
         assert page.locator('form[data-form="response"]').count() == 1, "Participant response form is missing"
         page.locator('form[data-form="response"] select[name="team"]').select_option("teams-1")
@@ -312,7 +312,7 @@ def run():
         page.locator('form[data-form="auth"] input[name="password"]').fill("fictional-password-only")
         page.locator('form[data-form="auth"] button[value="signin"]').click()
         page.locator('button[data-cmd="open"][data-id="ex-1"]').click()
-        page.locator('button[data-cmd="tab"][data-tab="responses"]').click()
+        page.locator('nav.workspace-nav button[data-cmd="tab"][data-tab="responses"]').click()
         assert page.locator('form[data-form="response"]').count() == 0, "Observer must not submit decisions"
         assert "Observe the exercise" in page.locator(".feature-hint").inner_text()
         assert not errors, f"Browser errors: {errors}"
