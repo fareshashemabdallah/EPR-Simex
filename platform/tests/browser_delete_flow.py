@@ -61,7 +61,7 @@ def run():
         page.locator('button[data-cmd="delete-record"][data-table="exercises"]').click()
         page.locator('form[data-form="delete-record"] input[name="confirmation"]').fill("Scratch Exercise")
         page.locator('form[data-form="delete-record"] button[type="submit"]').click()
-        page.get_by_text("No exercises are visible", exact=False).wait_for(timeout=7000)
+        page.get_by_text("No exercises yet", exact=False).wait_for(timeout=7000)
         assert sim.state["exercise"] is None, "Scratch exercise did not delete"
         assert not errors, f"Browser errors: {errors}"
         print("PASS: blocked decision-bearing deletion; authorized draft exercise deleted after typed confirmation")
