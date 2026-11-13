@@ -46,3 +46,70 @@
 .item .row{gap:.3rem;align-items:center;flex-wrap:wrap}
 .item .btn{white-space:nowrap}
 @media(max-width:670px){.edit-dialog{max-height:95vh}.edit-fields{gap:.5rem}.slide-rows{padding-left:.4rem}.item .row{gap:.4rem}}
+
+
+/* Role-centered EPR-Simex foundation experience: one learning plan, realistic practice. */
+.workspace-nav{margin-bottom:1rem;padding:.5rem;background:#fff;border:1px solid #dce7ec;border-radius:14px;display:grid;gap:.4rem}
+.nav-main,.nav-secondary{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem}
+.nav-main .btn{font-size:.85rem;padding:.6rem .78rem}
+.nav-secondary{padding-top:.45rem;border-top:1px solid #e8eef3}
+.nav-secondary>span{font-weight:750;color:#657589;font-size:.72rem;margin:0 .3rem}
+.nav-secondary .btn{border-color:transparent;background:transparent;color:#516376}
+.nav-secondary .btn.selected{background:#e6f5f6;color:#0b6672;border-color:#b3d7d9}
+.intro-strip{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.2rem;background:linear-gradient(125deg,#edf9fa 0%,#f9fcfe 100%);border:1px solid #c5e1e3;border-radius:14px;padding:1.3rem 1.45rem;margin-bottom:1rem}
+.intro-strip>div:first-child{max-width:68ch;flex:1}
+.intro-strip h2{margin:.4rem 0;font-size:1.35rem}
+.intro-strip p{margin:0;color:#40586a}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.7rem;margin:1rem 0}
+.metrics>div{background:#fff;border:1px solid #e1e9f0;border-radius:12px;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.1rem}
+.metrics b{font-size:1.7rem;color:#123349;letter-spacing:-.03em}
+.metrics span{font-size:.76rem;color:#6e7c8e}
+.readiness{display:grid;gap:.6rem}
+.ready-item{display:flex;align-items:center;gap:.8rem;padding:.75rem .1rem;border-bottom:1px solid #edf1f5}
+.ready-item:last-child{border:0}
+.ready-item p{font-size:.8rem;margin:.2rem 0}
+.ready-icon{width:29px;height:29px;flex:none;display:grid;place-items:center;border-radius:50%;border:1px solid #adbdc9;color:#365a6d;font-weight:800}
+.ready-icon.complete{background:#def5e7;border-color:#8acaa4;color:#176b43}
+.task-card,.event-card{border:1px solid #d7e6eb;background:#fbfefe;border-radius:12px;padding:1.05rem;display:grid;gap:.65rem;margin:.3rem 0}
+.task-card h3,.event-card h3{margin:.35rem 0}
+.task-card p,.event-card p{color:#3e5265;margin:.3rem 0}
+.task-card>.btn{justify-self:start}
+.learning-list{display:flex;flex-direction:column;gap:.2rem;border-bottom:1px solid #e6ebef;padding:.6rem 0}
+.learning-list span{font-size:.78rem;color:#6a7c89}
+.learning-list:last-of-type{border-bottom:0}
+.programme-day{border-left:3px solid #8dbdc2;margin:1rem 0;padding:.1rem 0 .1rem 1rem}
+.programme-day>div:first-child h3{font-size:1.24rem}
+.eyebrow{font-size:.72rem;font-weight:750;color:#476e7f;text-transform:uppercase;letter-spacing:.07em}
+.session-list{display:grid;gap:.75rem;margin:.75rem 0}
+.teaching-card{padding:1rem;border:1px solid #dce7ee;border-radius:12px;background:#fff}
+.teaching-card h3{margin:.3rem 0 .5rem}
+.teaching-card p{margin:.35rem 0 .65rem}
+.linked-stage{display:flex;gap:.55rem;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:.6rem .7rem;background:#eaf5f8;border-radius:8px;font-size:.79rem;color:#24586a}
+.facilitator-cues,.slides-details{margin:.65rem 0;padding:.55rem;background:#f6f9fc;border:1px solid #dfe9ef;border-radius:8px}
+.facilitator-cues summary,.slides-details summary{cursor:pointer;color:#165d70;font-weight:750;font-size:.82rem}
+.facilitator-cues p{white-space:pre-wrap}
+.teaching-actions{margin-top:.8rem}
+.stage-row{display:flex;align-items:start;flex-wrap:wrap;gap:.6rem;border-bottom:1px solid #e5ebf0;padding:.7rem 0}
+.stage-row>div:first-child{flex:1;min-width:170px}
+.stage-row p{font-size:.81rem;margin:.25rem 0}
+.stage-row.highlighted{background:#edf9f9;border-radius:8px;padding:.7rem}
+.active-filter{display:flex;justify-content:space-between;align-items:center;gap:.7rem;flex-wrap:wrap;padding:.7rem 1rem;border:1px solid #abd6de;border-radius:10px;margin:.8rem 0;background:#e6f5f9;color:#205a6c}
+.event-question{padding:.7rem;border-left:3px solid #217b88;background:#edf6f8;border-radius:6px}
+.reflect-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}
+.reflect-grid>div{background:#f5f9fc;border:1px solid #e3ecf2;border-radius:10px;padding:.85rem}
+.reflect-grid p{font-size:.83rem;margin:.4rem 0}
+.observation-entry{padding:.85rem;border:1px solid #e2e8ef;border-radius:10px}
+.observation-entry p{margin:.35rem 0}
+.term-guide{border:1px solid #dae5ec;border-radius:10px;background:#fff;padding:.8rem 1rem;font-size:.82rem}
+.term-guide summary{cursor:pointer;font-weight:750;color:#175e6a}
+.term-guide dl{margin:.8rem 0 0}
+.term-guide dt{font-weight:750;margin-top:.4rem}
+.term-guide dd{margin:.12rem 0 .3rem;color:#5c6f7f}
+@media (max-width:720px){
+ .intro-strip{align-items:start;padding:1rem}.nav-main .btn{flex:0 1 auto}
+ .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .reflect-grid{grid-template-columns:1fr}
+ .programme-day{padding-left:.6rem}
+ .teaching-card{padding:.8rem}
+ .workspace-nav{margin-left:-.2rem;margin-right:-.2rem}
+}
