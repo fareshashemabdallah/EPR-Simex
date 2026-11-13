@@ -179,14 +179,13 @@ function editingOverlay(){
 function deleteDependencies(table,row){
   if(table==="teams"){
     const counts=[
-      d("team_memberships").some(x=>x.team_id===row.id),
       d("inject_targets").some(x=>x.team_id===row.id),
       d("submissions").some(x=>x.team_id===row.id),
       d("messages").some(x=>x.team_id===row.id||x.to_team_id===row.id),
       d("document_records").some(x=>x.team_id===row.id),
       d("invitations").some(x=>x.team_id===row.id&&x.status==="pending")
     ];
-    if(counts.some(Boolean))return "This team still has members, inject assignments, responses, messages, references or pending invitations. Remove those links first.";
+    if(counts.some(Boolean))return "This team has inject assignments, responses, messages, references or pending invitations. Remove those linked records before deleting it.";
   }
   if(table==="stages"&&(d("injects").some(x=>x.stage_id===row.id)||d("agenda_sessions").some(x=>x.stage_id===row.id)||S.ex?.current_stage_id===row.id))return "This stage is in use. Reassign its injects and sessions before deleting.";
   if(table==="agenda_days"&&d("agenda_sessions").some(x=>x.day_id===row.id))return "This day still contains sessions. Delete or move those sessions first.";
@@ -197,16 +196,18 @@ function deletionOverlay(){
   if(!S.deletePrompt)return "";
   const {table,record}=S.deletePrompt;
   const title=record.title||record.name||record.action||record.email||"this item";
-  const blocked=deleteDependencies(table,record),big=["organizations","exercises"].includes(table);
+  const blocked=S.deletePrompt.blocker||deleteDependencies(table,record),big=["organizations","exercises"].includes(table);
   const isFile=table==="document_records"&&record.kind==="file";
-  const msg=table==="organizations"?"Only empty organizations can be deleted. All invitations and exercises must be removed first.":
-  table==="exercises"?"Only your own draft exercises without collaborators, submitted responses, messages or uploaded files can be deleted. This also removes all remaining draft stages, teams and training material.":
+  const msg=table==="organizations"?"Only organizations without exercises, documents or invitations can be deleted. All remaining organization memberships will also be removed, without deleting user accounts.":
+  table==="exercises"?"A draft exercise may be permanently deleted by its creator even if others have joined. This removes all exercise teams, team assignments, training days, slides, draft injects, invitations and messages. User accounts are not deleted. Exercises with recorded decisions, released injects or uploaded files remain protected.":
   table==="invitations"?"Revoke this invitation? The link will stop working, but any access already accepted is not removed.":
   table==="submissions"?"Delete this unsent draft? Submitted decisions are retained for exercise accountability.":
   isFile?"The stored file will be deleted from private storage before the reference entry is removed. This cannot be undone.":
+  table==="teams"?"Deleting this team also removes its member assignments. It cannot be deleted while injects, decisions, messages or references still depend on it.":
   "This record will be permanently deleted. Related data may be affected; review the warning below.";
   return '<div class="help-overlay edit-overlay"><section class="help-dialog edit-dialog" role="dialog" aria-modal="true" aria-labelledby="deleting-title"><span class="kicker">PLEASE CONFIRM</span><h2 id="deleting-title">'+(table==="invitations"?"Revoke invitation":"Delete "+esc(DISPLAY_NAMES[table]||table))+'</h2><p><b>'+esc(title)+'</b></p><p>'+esc(msg)+'</p>'+
-   (blocked?'<p class="notice error">'+esc(blocked)+'</p>':"")+
+   (blocked?'<p class="notice error" role="alert">'+esc(blocked)+'</p>':"")+
+   (S.deletePrompt.error?'<p class="notice error" role="alert">'+esc(S.deletePrompt.error)+'</p>':"")+
    '<form class="form" data-form="delete-record">'+(big?'<label for="delete-confirm">Type the exact name to confirm</label><input id="delete-confirm" name="confirmation" required autocomplete="off" placeholder="'+esc(title)+'">':"")+
    '<div class="row"><button class="btn '+(blocked?'':'danger')+'" type="submit"'+(blocked?' disabled':'')+'>'+(table==="invitations"?"Revoke invitation":"Delete permanently")+'</button><button type="button" class="btn" data-cmd="delete-cancel">Cancel</button></div></form></section></div>';
 }
@@ -235,6 +236,36 @@ async function openEditor(table,id){
   S.deletePrompt=null;
   render();
 }
+async function deletionBlocker(table,record){
+  const local=deleteDependencies(table,record);
+  if(local)return local;
+  if(table==="exercises"){
+    if(record.status!=="draft")return "Only draft exercises can be deleted. This exercise is no longer a draft.";
+    if(record.created_by!==uid())return "Only the exercise creator can permanently delete this draft.";
+    const id=encodeURIComponent(record.id);
+    const [responses,released,files]=await Promise.all([
+      qry("submissions","?select=id&exercise_id=eq."+id+"&limit=1"),
+      qry("injects","?select=id&exercise_id=eq."+id+"&status=eq.released&limit=1"),
+      qry("document_records","?select=id&exercise_id=eq."+id+"&kind=eq.file&limit=1")
+    ]);
+    if(responses?.length)return "This exercise already contains recorded team decisions. They must be retained for accountability; deletion is blocked.";
+    if(released?.length)return "This exercise contains released information injects. Deletion is blocked to protect exercise history.";
+    if(files?.length)return "This exercise contains uploaded files. Remove the stored files using Document library before deleting the exercise.";
+  }
+  if(table==="organizations"){
+    const id=encodeURIComponent(record.id);
+    const [exercises,docs,invites]=await Promise.all([
+      qry("exercises","?select=id&org_id=eq."+id+"&limit=1"),
+      qry("document_records","?select=id&org_id=eq."+id+"&limit=1"),
+      qry("invitations","?select=id&org_id=eq."+id+"&limit=1")
+    ]);
+    if(exercises?.length)return "This organization still contains exercises. Delete eligible draft exercises first; others must be preserved.";
+    if(docs?.length)return "This organization still has document references. Remove them before deleting the organization.";
+    if(invites?.length)return "This organization still has invitations. Revoke or resolve outstanding invitations first.";
+  }
+  return "";
+}
+
 async function openDeletion(table,id){
   if(!DISPLAY_NAMES[table])throw Error("Unsupported record type.");
   const items=await qry(table,"?select=*&id=eq."+encodeURIComponent(id));
@@ -242,7 +273,7 @@ async function openDeletion(table,id){
   if(!item||!canDeleteRecord(table,item))throw Error("Deleting this record is not permitted for your role or its current status.");
   if(item.exercise_id&&item.exercise_id!==exid())throw Error("This record belongs to a different exercise.");
   S.editor=null;
-  S.deletePrompt={table,id,record:item};
+  S.deletePrompt={table,id,record:item,blocker:await deletionBlocker(table,item),error:""};
   render();
 }
 function editableFields(table,record){
@@ -321,7 +352,8 @@ async function performDelete(form){
     const typed=String(new FormData(form).get("confirmation")||"").trim();
     if(typed!==name)throw Error("Confirmation did not match the exact record name.");
   }
-  const reason=deleteDependencies(table,record);
+  const reason=await deletionBlocker(table,record);
+  S.deletePrompt.blocker=reason;
   if(reason)throw Error(reason);
   if(table==="invitations"){
     const result=await update("invitations",id,{status:"revoked"});
@@ -367,7 +399,7 @@ if(kind==="message"){const b=val(fd,"body");if(!b)throw Error("Message cannot be
 if(kind==="action"){await insert("action_items",{...common,horizon:Number(val(fd,"horizon")),action:val(fd,"action"),owner_name:val(fd,"owner"),created_by:uid()});S.info="After-action improvement recorded.";await refreshExercise();return;}
 }
 document.addEventListener("click",async e=>{const b=e.target.closest("[data-cmd]");if(!b||b.disabled)return;b.disabled=true;try{S.error="";await command(b);}catch(err){flash(err.message,true);}finally{b.disabled=false;}});
-document.addEventListener("submit",async e=>{const f=e.target.closest("form[data-form]");if(!f)return;e.preventDefault();const b=e.submitter||f.querySelector("button");if(b)b.disabled=true;try{S.error="";await submitForm(f,e.submitter);}catch(err){flash(err.message,true);}finally{if(b)b.disabled=false;}});
+document.addEventListener("submit",async e=>{const f=e.target.closest("form[data-form]");if(!f)return;e.preventDefault();const b=e.submitter||f.querySelector("button");if(b)b.disabled=true;try{S.error="";await submitForm(f,e.submitter);}catch(err){if(f.dataset.form==="delete-record"&&S.deletePrompt){S.deletePrompt.error=err.message||"Deletion failed. Please check dependencies and permissions.";S.error="";render();}else flash(err.message,true);}finally{if(b)b.disabled=false;}});
 document.addEventListener("change",async e=>{if(e.target.id==="org-picker"){S.org=S.orgs.find(x=>x.id===e.target.value);try{await dashboard();}catch(err){flash(err.message,true);}}});
 window.addEventListener("keydown",e=>{if(e.key==="Escape"&&S.editor){S.editor=null;render();return;}if(e.key==="Escape"&&S.deletePrompt){S.deletePrompt=null;render();return;}if(e.key==="Escape"&&S.helpOpen){S.helpOpen=false;render();return;}if(!S.present)return;if(e.key==="ArrowRight"&&S.slideIndex<S.present.slides.length-1){S.slideIndex++;render();}if(e.key==="ArrowLeft"&&S.slideIndex>0){S.slideIndex--;render();}if(e.key==="Escape"){S.present=null;render();}});
 (async()=>{if(!configured){render();return;}parseEmailConfirmation();await refreshAuth();await restoreConfirmedIdentity();if(S.user){try{if(S.invite){await rpc("accept_invitation",{_token:S.invite});S.invite="";history.replaceState(null,"",location.pathname);}await dashboard();}catch(err){flash(err.message,true);}}else render();})();
