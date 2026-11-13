@@ -104,7 +104,11 @@ def handler(route):
                 else:
                     response = []
             else:
-                response = state[table]
+                if "id=eq." in u.query:
+                    key = u.query.split("id=eq.")[-1].split("&")[0]
+                    response = [x for x in state[table] if x["id"] == key]
+                else:
+                    response = state[table]
         else:
             response = []
     return route.fulfill(status=200, content_type="application/json",
@@ -292,6 +296,7 @@ def run():
         page.locator('form[data-form="response"] select[name="inject"]').select_option("injects-1")
         page.locator('form[data-form="response"] textarea[name="body"]').fill("Use alternate road; logistics unit responsible.")
         page.locator('form[data-form="response"] button[value="submitted"]').click()
+        check_label(page, "Decision submitted.")
         assert len(state["submissions"]) == 1, "Participant decision was not saved"
         assert state["submissions"][0]["status"] == "submitted"
         assert page.locator('button[data-cmd="delete-record"][data-table="submissions"]').count() == 0, "Submitted evidence must be locked"
