@@ -32,5 +32,19 @@ Use fictional cases and synthetic documents only. Do **not** say these cases pas
 | REL-02 | Refresh after signup, session expiry | Safe re-auth or token refresh |
 | EXP-01 | CSV export of decisions | Correct team-limited/scope-authorized data |
 | AAR-01 | Record 30/60/90 actions | Saved and visible only to authorized users |
+| CRUD-01 | Facilitator edits team, stage, draft inject and target team | Changes persist after refresh and are scoped to current exercise |
+| CRUD-02 | Facilitator edits training day, session, slide and speaker notes | Presentation reflects changes; notes stay facilitator-only |
+| CRUD-03 | Facilitator edits reference link and deletes it | Changes persist; deletion removes the link only |
+| CRUD-04 | Original uploader deletes a stored synthetic training file | Object removed through Storage API; document record no longer visible |
+| CRUD-05 | Delete a team, stage or training day with dependent records | Blocked with clear instructions; existing data preserved |
+| CRUD-06 | Original director deletes own draft exercise with no collaborators/evidence | Requires exact-name confirmation; no other exercise data affected |
+| CRUD-07 | Other member attempts to delete a draft exercise or an organization | Rejected |
+| CRUD-08 | Participant edits/deletes own draft response then submits | Draft changes persist; submitted response cannot be deleted |
+| CRUD-09 | Facilitator tries to edit/delete released inject | Blocked; follow-up inject required |
+| CRUD-10 | Staff edits/deletes 30/60/90-day AAR action | Only permitted staff can modify the item |
+| CRUD-11 | Facilitator revokes a pending invitation | Old private link cannot be redeemed; accepted membership unaffected |
+| CRUD-12 | Attempt direct REST deletion of another organization's or team's record | Forbidden / zero rows |
+| CRUD-13 | Mobile Safari opens edit panel, saves, cancels and confirms deletion | All controls accessible, no accidental form submission |
+
 
 Record test date, account/role, exact request, expected/actual response, server logs, and defect numbers. Independent penetration testing is required for production.
