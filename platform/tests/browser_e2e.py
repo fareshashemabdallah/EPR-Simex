@@ -65,7 +65,7 @@ def handler(route):
         response = [{"id":"org-1","name":state["orgName"],"description":"Test org"}] if state["org"] or method=="DELETE" else []
     elif path == "/rest/v1/org_memberships":
         response = ([{"org_id": "org-1", "role": "org_admin", "status": "active",
-                      "organizations": {"id": "org-1", "name": state["orgName"]}}]
+                      "organizations": {"id": "org-1", "name": state["orgName"], "created_by": USER["id"]}}]
                     if state["org"] else [])
     elif path == "/rest/v1/exercises":
         if method == "POST":
@@ -88,6 +88,8 @@ def handler(route):
         if table in state and isinstance(state[table], list):
             if method == "POST":
                 entry = dict(data, id=f"{table}-{len(state[table])+1}")
+                if table == "submissions": entry["updated_by"] = USER["id"]
+                if table == "invitations": entry.update(status="pending",token="fictional-invite-token")
                 state[table].append(entry)
                 response = [entry]
             elif method in ("PATCH","DELETE"):
@@ -276,10 +278,23 @@ def run():
         assert page.locator('form[data-form="response"]').count() == 1, "Participant response form is missing"
         page.locator('form[data-form="response"] select[name="team"]').select_option("teams-1")
         page.locator('form[data-form="response"] select[name="inject"]').select_option("injects-1")
+        page.locator('form[data-form="response"] textarea[name="body"]').fill("Initial draft route")
+        page.locator('form[data-form="response"] button[value="draft"]').click()
+        assert len(state["submissions"]) == 1, "Draft decision was not saved"
+        page.locator('button[data-cmd="edit-record"][data-table="submissions"]').click()
+        page.locator('form[data-form="edit-record"] textarea[name="body"]').fill("Revised draft route")
+        page.locator('form[data-form="edit-record"] button[type="submit"]').click()
+        assert state["submissions"][0]["body"] == "Revised draft route", "Participant draft edit failed"
+        page.locator('button[data-cmd="delete-record"][data-table="submissions"]').click()
+        page.locator('form[data-form="delete-record"] button[type="submit"]').click()
+        assert len(state["submissions"]) == 0, "Participant draft deletion failed"
+        page.locator('form[data-form="response"] select[name="team"]').select_option("teams-1")
+        page.locator('form[data-form="response"] select[name="inject"]').select_option("injects-1")
         page.locator('form[data-form="response"] textarea[name="body"]').fill("Use alternate road; logistics unit responsible.")
         page.locator('form[data-form="response"] button[value="submitted"]').click()
         assert len(state["submissions"]) == 1, "Participant decision was not saved"
         assert state["submissions"][0]["status"] == "submitted"
+        assert page.locator('button[data-cmd="delete-record"][data-table="submissions"]').count() == 0, "Submitted evidence must be locked"
 
         # Observers receive guidance but cannot submit team decisions.
         page.locator('button[data-cmd="signout"]').click()
