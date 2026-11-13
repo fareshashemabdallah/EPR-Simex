@@ -247,6 +247,7 @@ def run():
         page.locator('form[data-form="session"] textarea[name="objectives"]').fill("Identify a feasible alternative supply route")
         page.locator('form[data-form="session"] textarea[name="notes"]').fill("Facilitator confidential discussion prompt")
         page.locator('form[data-form="session"] button').click()
+        check_label(page, "Activity added to the teaching programme.")
         assert state["agenda_sessions"][0]["stage_id"]=="stages-1"
         assert any(n["subject_type"]=="session" and "confidential" in n["body"] for n in state["private_notes"])
         page.locator('button[data-cmd="session-challenge"]').click()
