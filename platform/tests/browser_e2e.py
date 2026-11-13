@@ -15,10 +15,10 @@ BACKEND = "rqspzcnkbftytldggezc.supabase.co"
 USER = {"id": "10000000-0000-4000-8000-000000000099", "email": "facilitator@example.org"}
 
 state = {
-    "org": False, "signup_requests": 0, "resend_requests": 0, "acting_role": "director",
+    "org": False, "orgName": "Fictional Agency", "signup_requests": 0, "resend_requests": 0, "acting_role": "director",
     "exercise": None,
     "teams": [], "team_memberships": [], "stages": [], "injects": [], "inject_targets": [],
-    "agenda_days": [], "agenda_sessions": [], "slides": [], "submissions": [],
+    "agenda_days": [], "agenda_sessions": [], "slides": [], "private_notes": [], "submissions": [],
     "invitations": [], "messages": [], "reviews": [], "document_records": [], "action_items": []
 }
 
@@ -57,9 +57,15 @@ def handler(route):
     elif path == "/rest/v1/rpc/create_organization":
         state["org"] = True
         response = "org-1"
+    elif path == "/rest/v1/organizations":
+        if method == "PATCH":
+            state["orgName"] = data.get("name",state["orgName"])
+        if method == "DELETE":
+            state["org"] = False
+        response = [{"id":"org-1","name":state["orgName"],"description":"Test org"}] if state["org"] or method=="DELETE" else []
     elif path == "/rest/v1/org_memberships":
         response = ([{"org_id": "org-1", "role": "org_admin", "status": "active",
-                      "organizations": {"id": "org-1", "name": "Fictional Agency"}}]
+                      "organizations": {"id": "org-1", "name": state["orgName"]}}]
                     if state["org"] else [])
     elif path == "/rest/v1/exercises":
         if method == "POST":
@@ -68,6 +74,9 @@ def handler(route):
         elif method == "PATCH":
             state["exercise"].update(data)
             response = [state["exercise"]]
+        elif method == "DELETE":
+            response = [state["exercise"]] if state["exercise"] else []
+            state["exercise"] = None
         else:
             response = [state["exercise"]] if state["exercise"] else []
     elif path == "/rest/v1/exercise_memberships":
@@ -81,11 +90,14 @@ def handler(route):
                 entry = dict(data, id=f"{table}-{len(state[table])+1}")
                 state[table].append(entry)
                 response = [entry]
-            elif method == "PATCH":
+            elif method in ("PATCH","DELETE"):
                 key = u.query.split("id=eq.")[-1].split("&")[0]
                 entry = next((x for x in state[table] if x["id"] == key), None)
                 if entry:
-                    entry.update(data)
+                    if method=="PATCH":
+                        entry.update(data)
+                    else:
+                        state[table].remove(entry)
                     response = [entry]
                 else:
                     response = []
@@ -173,11 +185,29 @@ def run():
         page.locator('form[data-form="team"] input[name="name"]').fill("Team Alpha")
         page.locator('form[data-form="team"] button').click()
         check_label(page, "Team Alpha")
+        page.locator('button[data-cmd="edit-record"][data-table="teams"]').click()
+        page.locator('form[data-form="edit-record"] input[name="name"]').fill("Team Alpha Updated")
+        page.locator('form[data-form="edit-record"] button[type="submit"]').click()
+        check_label(page,"Team Alpha Updated")
+        assert state["teams"][0]["name"]=="Team Alpha Updated"
+
+        page.locator('form[data-form="team"] input[name="name"]').fill("Disposable Team")
+        page.locator('form[data-form="team"] button').click()
+        check_label(page,"Disposable Team")
+        page.locator('button[data-cmd="delete-record"][data-table="teams"][data-id="teams-2"]').click()
+        page.locator('form[data-form="delete-record"] button[type="submit"]').click()
+        assert len(state["teams"])==1, "Disposable team did not delete"
+
 
         page.locator('button[data-cmd="tab"][data-tab="scenario"]').click()
         page.locator('form[data-form="stage"] input[name="name"]').fill("H0 Activate")
         page.locator('form[data-form="stage"] button').click()
         check_label(page, "H0 Activate")
+        page.locator('button[data-cmd="edit-record"][data-table="stages"]').click()
+        page.locator('form[data-form="edit-record"] input[name="name"]').fill("H0 Activation Updated")
+        page.locator('form[data-form="edit-record"] button[type="submit"]').click()
+        check_label(page, "H0 Activation Updated")
+
         page.locator('form[data-form="inject"] select[name="stage"]').select_option("stages-1")
         page.locator('form[data-form="inject"] input[name="title"]').fill("Bridge closure")
         page.locator('form[data-form="inject"] textarea[name="body"]').fill(
@@ -185,6 +215,11 @@ def run():
         )
         page.locator('form[data-form="inject"] button').click()
         check_label(page, "Bridge closure")
+        page.locator('button[data-cmd="edit-record"][data-table="injects"]').click()
+        page.locator('form[data-form="edit-record"] input[name="title"]').fill("Bridge closure — updated")
+        page.locator('form[data-form="edit-record"] button[type="submit"]').click()
+        check_label(page, "Bridge closure — updated")
+
         assert page.locator("main img").count() == 0, "XSS: inject content rendered as HTML"
         assert page.evaluate("window.__executed === undefined"), "XSS event executed"
 
@@ -205,10 +240,25 @@ def run():
         page.locator('form[data-form="slide"] select[name="session"]').select_option("agenda_sessions-1")
         page.locator('form[data-form="slide"] input[name="title"]').fill("Emergency routes")
         page.locator('form[data-form="slide"] button').click()
+        page.locator('button[data-cmd="edit-record"][data-table="slides"]').click()
+        page.locator('form[data-form="edit-record"] input[name="title"]').fill("Emergency routes revised")
+        page.locator('form[data-form="edit-record"] button[type="submit"]').click()
+        assert state["slides"][0]["title"] == "Emergency routes revised"
         page.locator('button[data-cmd="present"]').click()
-        check_label(page, "Emergency routes")
+        check_label(page, "Emergency routes revised")
         page.locator('button[data-cmd="close-present"]').click()
         check_label(page, "Course programme")
+        page.locator('button[data-cmd="tab"][data-tab="review"]').click()
+        page.locator('form[data-form="action"] textarea[name="action"]').fill("Replace outdated contingency maps")
+        page.locator('form[data-form="action"] button').click()
+        page.locator('button[data-cmd="edit-record"][data-table="action_items"]').click()
+        page.locator('form[data-form="edit-record"] textarea[name="action"]').fill("Update contingency maps")
+        page.locator('form[data-form="edit-record"] button[type="submit"]').click()
+        assert state["action_items"][0]["action"] == "Update contingency maps"
+        page.locator('button[data-cmd="delete-record"][data-table="action_items"]').click()
+        page.locator('form[data-form="delete-record"] button[type="submit"]').click()
+        assert not state["action_items"], "AAR action should be deletable"
+
         # A participant can see assigned teams/injects and submit a decision.
         state["team_memberships"].append({
             "id": "team_memberships-1", "team_id": "teams-1", "exercise_id": "ex-1",
