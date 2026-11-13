@@ -95,6 +95,7 @@ test("auth -> org -> exercise -> team -> stage -> targeted inject",async()=>{
   await h.submit("inject",{stage:"stage-1",target:"all",title:"Road closure",body:"<script>bad()</script>",prompt:"Decide alternative route"});
   assert.equal(h.backend.injects.length,1);
   assert.equal(h.backend.targets.length,1);
+  await h.click("tab",{tab:"scenario"});
   assert.match(h.root.innerHTML,/Road closure/);
   assert.match(h.root.innerHTML,/&lt;script&gt;bad\(\)&lt;\/script&gt;/);
   assert.doesNotMatch(h.root.innerHTML,/<script>bad\(\)<\/script>/);
