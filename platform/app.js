@@ -105,7 +105,7 @@ async function resendConfirmation(email){
 }
 function parseEmailConfirmation(){const p=new URLSearchParams((location.hash||"").replace(/^#/,""));const token=p.get("access_token"),refresh=p.get("refresh_token");if(token&&refresh){let expires=Number(p.get("expires_in")||3600);saveSession({access_token:token,refresh_token:refresh,token_type:"bearer",expires_in:expires,expires_at:Math.floor(Date.now()/1000)+expires,user:null});history.replaceState(null,"",location.pathname+location.search);return true;}if(p.get("error_description")){S.error=p.get("error_description");history.replaceState(null,"",location.pathname+location.search);}return false;}
 async function restoreConfirmedIdentity(){if(!S.session?.access_token||S.user)return;try{const u=await request("/auth/v1/user");if(u?.id){S.session.user=u;saveSession(S.session);}}catch{saveSession(null);}}
-async function signOut(){try{await request("/auth/v1/logout",{method:"POST"});}catch{}saveSession(null);S.org=null;S.ex=null;S.orgs=[];S.invite="";S.helpOpen=false;S.tourActive=null;S.tourStep=0;S.info="You are signed out.";render();}
+async function signOut(){try{await request("/auth/v1/logout",{method:"POST"});}catch{}saveSession(null);S.org=null;S.ex=null;S.orgs=[];S.invite="";S.editor=null;S.deletePrompt=null;S.helpOpen=false;S.tourActive=null;S.tourStep=0;S.info="You are signed out.";render();}
 async function dashboard(){if(!S.user){render();return;}let memberships=await qry("org_memberships","?select=org_id,role,status,organizations(id,name)&user_id=eq."+uid()+"&status=eq.active");S.orgs=(memberships||[]).map(m=>({id:m.org_id,name:m.organizations?.name||"Organization",role:m.role}));if(!S.orgs.some(o=>o.id===orgid()))S.org=S.orgs[0]||null;S.exercises=S.org?await qry("exercises","?select=*&org_id=eq."+orgid()+"&order=created_at.desc"):[];S.ex=null;render();}
 function homeScreen(){chrome('<div class="hero"><div><span class="kicker">Organization workspaces</span><h1>Your simulation exercises</h1><p>Design and deliver full humanitarian training programmes.</p></div>'+(S.org?'<label for="org-picker">Organization</label><select id="org-picker">'+S.orgs.map(o=>'<option value="'+esc(o.id)+'" '+(o.id===orgid()?"selected":"")+'>'+esc(o.name)+'</option>').join("")+'</select>':'')+'</div>'+guidePanel()+'<div class="cols"><section class="stack"><div class="card"><h2>'+(S.org?esc(S.org.name):"No organization yet")+'</h2>'+(S.org?recordActions("organizations",{id:S.org.id,name:S.org.name}):"")+'<p>'+(S.org?"Your role: "+esc(S.org.role):"Create your first training organization below.")+'</p></div><div class="card stack"><h2>Exercises</h2>'+(S.exercises.length?'<div class="list">'+S.exercises.map(e=>row(esc(e.title),esc(e.description||"No description"),pill(e.status)+recordActions("exercises",e)+'<button class="btn primary small" data-cmd="open" data-id="'+esc(e.id)+'">Open</button>')).join("")+'</div>':empty("No exercises are visible to this account."))+'</div></section><aside class="stack"><div class="card"><h3>Create organization</h3><form data-form="organization" class="form">'+input("name","Organization name","","text",true)+area("description","Description")+'<button class="btn primary">Create organization</button></form></div>'+(S.org&&["org_admin","facilitator"].includes(S.org.role)?'<div class="card"><h3>Build an exercise</h3><form data-form="exercise" class="form">'+input("title","Exercise title","","text",true)+area("description","Scenario background")+input("num_days","Number of training days","3","number",true)+'<button class="btn primary">Create exercise</button></form></div>':'')+'</aside></div>');}
 async function loadExercise(id,tab){let ex=S.exercises.find(e=>e.id===id)|| (await qry("exercises","?select=*&id=eq."+encodeURIComponent(id)))[0];if(!ex)throw Error("This exercise is not accessible to your account.");S.ex=ex;S.tab=tab||"control";await refreshExercise();}
@@ -223,8 +223,116 @@ async function present(sessionId){const ses=d("agenda_sessions").find(x=>x.id===
 function presentationScreen(){const p=S.present,s=p.slides[S.slideIndex]||{title:p.session.title,body:p.session.learning_objectives||"No slides authored."};root.innerHTML='<div class="presentation"><article><div class="kicker">EPR-Simex Training Studio · '+esc(p.session.title)+'</div><h1>'+esc(s.title)+'</h1><p>'+lines(s.body)+'</p></article><footer><button class="btn small" data-cmd="prev" '+(S.slideIndex===0?"disabled":"")+'>← Previous</button><span>'+ (S.slideIndex+1)+' / '+Math.max(1,p.slides.length)+'</span><div class="row"><button class="btn small" data-cmd="next" '+(S.slideIndex>=p.slides.length-1?"disabled":"")+'>Next →</button><button class="btn small" data-cmd="close-present">Exit</button></div></footer></div>';}
 function render(){try{if(!configured){configScreen();return;}if(S.present){presentationScreen();return;}if(!S.user){authScreen();return;}userGuide();if(S.ex){exerciseScreen();return;}homeScreen();}catch(err){console.error(err);root.innerHTML='<main class="wrap"><div class="card notice error"><h2>Display error</h2><p>'+esc(err.message)+'</p><button onclick="location.reload()" class="btn">Reload</button></div></main>';}}
 function csv(){const rows=[["Team","Inject","Status","Decision"],...d("submissions").map(s=>[d("teams").find(x=>x.id===s.team_id)?.name||"",d("injects").find(x=>x.id===s.inject_id)?.title||"",s.status,s.body])];const text=rows.map(r=>r.map(x=>{let v=String(x||"");if(/^[\s\u0000-\u001f]*[=+@-]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';}).join(",")).join("\r\n");const blob=new Blob([text],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="epr-simex-decisions.csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
-async function command(btn){let cmd=btn.dataset.cmd;if(cmd==="help-open"){S.helpOpen=true;S.hintExpanded=false;render();return;}if(cmd==="help-close"){S.helpOpen=false;render();return;}if(cmd==="guide-start"){S.tourStep=0;S.tourActive=true;render();return;}if(cmd==="guide-skip"){closeGuide();render();return;}if(cmd==="guide-back"){S.tourStep=Math.max(0,S.tourStep-1);render();return;}if(cmd==="guide-next"){S.tourStep=Math.min(tourSteps().length-1,S.tourStep+1);render();return;}if(cmd==="hint-toggle"){S.hintExpanded=!S.hintExpanded;render();return;}if(cmd==="help-go"){S.helpOpen=false;if(btn.dataset.tab==="home"){await dashboard();return;}if(!S.ex){flash("Open an exercise first to use this section.",true);return;}S.tab=btn.dataset.tab;S.hintExpanded=true;render();return;}if(cmd==="auth-mode"){S.authMode=btn.dataset.mode==="signin"?"signin":"signup";S.error="";S.info="";S.registrationEmail="";render();return;}if(cmd==="auth-start-over"){S.registrationEmail="";S.error="";S.info="";render();return;}if(cmd==="resend-confirmation"){await resendConfirmation(S.registrationEmail);S.error="";S.info="Supabase accepted the verification request, but delivery is not guaranteed. If nothing arrives, ask the project administrator to configure custom SMTP; already-confirmed accounts can sign in directly.";render();return;}if(cmd==="home"){await dashboard();return;}if(cmd==="signout"){await signOut();return;}if(cmd==="open"){await loadExercise(btn.dataset.id,"control");return;}if(cmd==="refresh"){await refreshExercise();return;}if(cmd==="tab"){S.tab=btn.dataset.tab;S.info="";S.error="";render();return;}if(cmd==="status"){await update("exercises",exid(),{status:btn.dataset.status});S.info="Exercise status updated.";await refreshExercise();return;}if(cmd==="release"){await update("injects",btn.dataset.id,{status:"released"});S.info="Inject released to authorized teams.";await refreshExercise();return;}if(cmd==="present"){await present(btn.dataset.id);return;}if(cmd==="prev"){S.slideIndex=Math.max(0,S.slideIndex-1);render();return;}if(cmd==="next"){S.slideIndex=Math.min(S.slideIndex+1,S.present.slides.length-1);render();return;}if(cmd==="close-present"){S.present=null;render();return;}if(cmd==="export"){csv();return;}if(cmd==="copy"){await navigator.clipboard.writeText(S.inviteUrl);flash("Private invitation link copied.");return;}if(cmd==="review"){const sub=d("submissions").find(s=>s.id===btn.dataset.id);if(!sub)throw Error("Submission not found");const comment=prompt(btn.dataset.status==="returned"?"Reason for returning:":"Review comment:")||"";await insert("reviews",{submission_id:sub.id,exercise_id:exid(),org_id:orgid(),team_id:sub.team_id,reviewer_id:uid(),decision:btn.dataset.status,comment});await update("submissions",sub.id,{status:btn.dataset.status});S.info="Review saved.";await refreshExercise();return;}if(cmd==="document"){let doc=d("document_records").find(x=>x.id===btn.dataset.id);if(!doc)throw Error("Reference unavailable");if(doc.kind==="link"){if(!/^https:\/\//i.test(doc.url))throw Error("Only HTTPS links are permitted");window.open(doc.url,"_blank","noopener,noreferrer");}else{let encoded=doc.storage_path.split("/").map(encodeURIComponent).join("/");let r=await request("/storage/v1/object/sign/documents/"+encoded,{method:"POST",body:{expiresIn:60}});let path=r.signedURL||r.signedUrl;if(!path)throw Error("No download URL returned");let u=path.startsWith("http")?path:base+"/storage/v1"+path;window.open(u,"_blank","noopener,noreferrer");}return;}}
-async function submitForm(form,btn){const fd=new FormData(form),kind=form.dataset.form;
+
+async function openEditor(table,id){
+  if(!EDIT_FIELDS[table])throw Error("This record type cannot be edited.");
+  const rows=await qry(table,"?select=*&id=eq."+encodeURIComponent(id));
+  const item=rows?.[0];
+  if(!item||!canEditRecord(table,item))throw Error("You cannot edit this record with your current account permissions.");
+  if(item.exercise_id&&item.exercise_id!==exid())throw Error("This record belongs to a different exercise.");
+  S.editor={table,id,record:item};
+  S.deletePrompt=null;
+  render();
+}
+async function openDeletion(table,id){
+  if(!DISPLAY_NAMES[table])throw Error("Unsupported record type.");
+  const items=await qry(table,"?select=*&id=eq."+encodeURIComponent(id));
+  const item=items?.[0];
+  if(!item||!canDeleteRecord(table,item))throw Error("Deleting this record is not permitted for your role or its current status.");
+  if(item.exercise_id&&item.exercise_id!==exid())throw Error("This record belongs to a different exercise.");
+  S.editor=null;
+  S.deletePrompt={table,id,record:item};
+  render();
+}
+function editableFields(table,record){
+  let fs=EDIT_FIELDS[table]||[];
+  if(table==="document_records"&&record.kind!=="link")fs=fs.filter(f=>f[0]!=="url");
+  return fs;
+}
+async function saveEditor(form){
+  if(!S.editor)throw Error("No record selected.");
+  const {table,id,record}=S.editor;
+  if(!canEditRecord(table,record))throw Error("You do not have permission to edit this record.");
+  const fd=new FormData(form),patch={};
+  for(const [key,_,type,required] of editableFields(table,record)){
+    const v=String(fd.get(key)??"").trim();
+    if(required&&!v)throw Error("Please complete the required field: "+key.replace(/_/g," ")+".");
+    if(key==="notes")continue; // speaker notes are stored separately from slide content
+    if(type==="number"){
+      const n=Number(v);if(!Number.isInteger(n)||n<1||n>30)throw Error("A positive number between 1 and 30 is required.");
+      patch[key]=n;continue;
+    }
+    if(key==="horizon"){patch[key]=Number(v);continue;}
+    if(type==="time"){patch[key]=v||null;continue;}
+    if(["day_id","stage_id","team_id"].includes(key)){patch[key]=v||null;continue;}
+    patch[key]=v;
+  }
+  if(table==="document_records"){
+    if(patch.visibility==="team"&&!patch.team_id)throw Error("Select a team before choosing team-only visibility.");
+    if(patch.visibility!=="team")patch.team_id=null;
+    if(record.kind==="link"&&!/^https:\/\//i.test(patch.url||""))throw Error("Document links must start with https://");
+  }
+  if(table==="exercises"&&patch.title.length<2)throw Error("Exercise titles need at least 2 characters.");
+  if(table==="organizations"&&patch.name.length<2)throw Error("Organization names need at least 2 characters.");
+  if(table==="submissions"){
+    if(!teamIds().has(record.team_id)||!["draft","returned"].includes(record.status))throw Error("Only your own draft or returned response can be edited.");
+    patch.status="draft";
+  }
+  const outcome=await update(table,id,patch);
+  if(!outcome)throw Error("Nothing was updated. Your permissions or the record may have changed; refresh the page.");
+  if(table==="slides"){
+    const noteText=String(fd.get("notes")||"").trim();
+    const oldNote=d("private_notes").find(n=>n.subject_type==="slide"&&n.subject_id===id);
+    if(oldNote&&oldNote.body!==noteText){
+      if(noteText){const changed=await update("private_notes",oldNote.id,{body:noteText});if(!changed)throw Error("Slide saved, but private speaker notes could not be updated.");}
+      else{const removed=await deleteRow("private_notes",oldNote.id);if(!removed)throw Error("Slide saved, but private speaker notes could not be cleared.");}
+    }else if(!oldNote&&noteText){
+      await insert("private_notes",{org_id:orgid(),exercise_id:exid(),subject_type:"slide",subject_id:id,body:noteText});
+    }
+  }
+  const wasCurrent=!!S.ex;
+  S.editor=null;
+  S.info=(DISPLAY_NAMES[table]||"Record")+" updated successfully.";
+  if(wasCurrent){await refreshExercise();if(table==="exercises")S.ex=outcome;render();}
+  else await dashboard();
+}
+async function performDelete(form){
+  if(!S.deletePrompt)throw Error("Select a record to delete.");
+  const {table,id,record}=S.deletePrompt;
+  if(!canDeleteRecord(table,record))throw Error("Deleting this record is not allowed.");
+  const name=record.title||record.name||record.action||record.email||"this item";
+  if(["organizations","exercises"].includes(table)){
+    const typed=String(new FormData(form).get("confirmation")||"").trim();
+    if(typed!==name)throw Error("Confirmation did not match the exact record name.");
+  }
+  const reason=deleteDependencies(table,record);
+  if(reason)throw Error(reason);
+  if(table==="invitations"){
+    const result=await update("invitations",id,{status:"revoked"});
+    if(!result)throw Error("Invitation could not be revoked. It may already have been accepted.");
+  }else{
+    if(table==="document_records"&&record.kind==="file"){
+      if(record.owner_id!==uid()||!record.storage_path)throw Error("Only the original uploader can remove this stored file.");
+      // Storage is removed first. If that fails, keep the metadata record and show the failure.
+      const storageResult=await request("/storage/v1/object/documents",{method:"DELETE",body:{prefixes:[record.storage_path]}});
+      if(!Array.isArray(storageResult)||!storageResult.some(x=>x.name===record.storage_path||x.name===record.storage_path.split("/").pop())){
+        throw Error("Storage deletion could not be verified. The document record was kept; contact the facilitator.");
+      }
+    }
+    const result=await deleteRow(table,id);
+    if(!result)throw Error("The database did not delete this record. Refresh and check permissions.");
+  }
+  const wasExercise=!!S.ex;
+  S.deletePrompt=null;
+  S.info=(table==="invitations"?"Invitation revoked.":(DISPLAY_NAMES[table]||"Record")+" deleted.");
+  if(["organizations","exercises"].includes(table)){
+    if(table==="organizations"||!wasExercise||S.ex.id===id){S.org=table==="organizations"?null:S.org;await dashboard();return;}
+  }
+  if(wasExercise)await refreshExercise();else await dashboard();
+}
+
+async function command(btn){let cmd=btn.dataset.cmd;if(cmd==="edit-record"){await openEditor(btn.dataset.table,btn.dataset.id);return;}if(cmd==="delete-record"){await openDeletion(btn.dataset.table,btn.dataset.id);return;}if(cmd==="edit-cancel"){S.editor=null;render();return;}if(cmd==="delete-cancel"){S.deletePrompt=null;render();return;}if(cmd==="help-open"){S.helpOpen=true;S.hintExpanded=false;render();return;}if(cmd==="help-close"){S.helpOpen=false;render();return;}if(cmd==="guide-start"){S.tourStep=0;S.tourActive=true;render();return;}if(cmd==="guide-skip"){closeGuide();render();return;}if(cmd==="guide-back"){S.tourStep=Math.max(0,S.tourStep-1);render();return;}if(cmd==="guide-next"){S.tourStep=Math.min(tourSteps().length-1,S.tourStep+1);render();return;}if(cmd==="hint-toggle"){S.hintExpanded=!S.hintExpanded;render();return;}if(cmd==="help-go"){S.helpOpen=false;if(btn.dataset.tab==="home"){await dashboard();return;}if(!S.ex){flash("Open an exercise first to use this section.",true);return;}S.tab=btn.dataset.tab;S.hintExpanded=true;render();return;}if(cmd==="auth-mode"){S.authMode=btn.dataset.mode==="signin"?"signin":"signup";S.error="";S.info="";S.registrationEmail="";render();return;}if(cmd==="auth-start-over"){S.registrationEmail="";S.error="";S.info="";render();return;}if(cmd==="resend-confirmation"){await resendConfirmation(S.registrationEmail);S.error="";S.info="Supabase accepted the verification request, but delivery is not guaranteed. If nothing arrives, ask the project administrator to configure custom SMTP; already-confirmed accounts can sign in directly.";render();return;}if(cmd==="home"){await dashboard();return;}if(cmd==="signout"){await signOut();return;}if(cmd==="open"){await loadExercise(btn.dataset.id,"control");return;}if(cmd==="refresh"){await refreshExercise();return;}if(cmd==="tab"){S.tab=btn.dataset.tab;S.info="";S.error="";render();return;}if(cmd==="status"){await update("exercises",exid(),{status:btn.dataset.status});S.info="Exercise status updated.";await refreshExercise();return;}if(cmd==="release"){await update("injects",btn.dataset.id,{status:"released"});S.info="Inject released to authorized teams.";await refreshExercise();return;}if(cmd==="present"){await present(btn.dataset.id);return;}if(cmd==="prev"){S.slideIndex=Math.max(0,S.slideIndex-1);render();return;}if(cmd==="next"){S.slideIndex=Math.min(S.slideIndex+1,S.present.slides.length-1);render();return;}if(cmd==="close-present"){S.present=null;render();return;}if(cmd==="export"){csv();return;}if(cmd==="copy"){await navigator.clipboard.writeText(S.inviteUrl);flash("Private invitation link copied.");return;}if(cmd==="review"){const sub=d("submissions").find(s=>s.id===btn.dataset.id);if(!sub)throw Error("Submission not found");const comment=prompt(btn.dataset.status==="returned"?"Reason for returning:":"Review comment:")||"";await insert("reviews",{submission_id:sub.id,exercise_id:exid(),org_id:orgid(),team_id:sub.team_id,reviewer_id:uid(),decision:btn.dataset.status,comment});await update("submissions",sub.id,{status:btn.dataset.status});S.info="Review saved.";await refreshExercise();return;}if(cmd==="document"){let doc=d("document_records").find(x=>x.id===btn.dataset.id);if(!doc)throw Error("Reference unavailable");if(doc.kind==="link"){if(!/^https:\/\//i.test(doc.url))throw Error("Only HTTPS links are permitted");window.open(doc.url,"_blank","noopener,noreferrer");}else{let encoded=doc.storage_path.split("/").map(encodeURIComponent).join("/");let r=await request("/storage/v1/object/sign/documents/"+encoded,{method:"POST",body:{expiresIn:60}});let path=r.signedURL||r.signedUrl;if(!path)throw Error("No download URL returned");let u=path.startsWith("http")?path:base+"/storage/v1"+path;window.open(u,"_blank","noopener,noreferrer");}return;}}
+async function submitForm(form,btn){const fd=new FormData(form),kind=form.dataset.form;if(kind==="edit-record"){await saveEditor(form);return;}if(kind==="delete-record"){await performDelete(form);return;}
 if(kind==="auth"){let email=val(fd,"email"),pw=String(fd.get("password")||"");if(S.authMode==="signup"){if(pw.length<8)throw Error("Choose a password with at least 8 characters.");if(pw!==String(fd.get("confirmPassword")||""))throw Error("The two passwords do not match.");await signUp(email,pw);if(!S.user){S.registrationEmail=email;S.error="";S.info="";render();return;}}else await signIn(email,pw);S.registrationEmail="";if(S.invite){await rpc("accept_invitation",{_token:S.invite});S.invite="";history.replaceState(null,"",location.pathname);}S.info="Signed in.";await dashboard();return;}
 if(kind==="organization"){await rpc("create_organization",{_name:val(fd,"name"),_description:val(fd,"description")});S.info="Organization created.";await dashboard();return;}
 if(kind==="exercise"){let days=Number(val(fd,"num_days"));if(days<1||days>30)throw Error("Duration must be between 1 and 30 days");const x=await insert("exercises",{org_id:orgid(),title:val(fd,"title"),description:val(fd,"description"),num_days:days,created_by:uid()});S.info="Exercise created.";await dashboard();if(x?.id)await loadExercise(x.id,"control");return;}
@@ -245,5 +353,5 @@ if(kind==="action"){await insert("action_items",{...common,horizon:Number(val(fd
 document.addEventListener("click",async e=>{const b=e.target.closest("[data-cmd]");if(!b||b.disabled)return;b.disabled=true;try{S.error="";await command(b);}catch(err){flash(err.message,true);}finally{b.disabled=false;}});
 document.addEventListener("submit",async e=>{const f=e.target.closest("form[data-form]");if(!f)return;e.preventDefault();const b=e.submitter||f.querySelector("button");if(b)b.disabled=true;try{S.error="";await submitForm(f,e.submitter);}catch(err){flash(err.message,true);}finally{if(b)b.disabled=false;}});
 document.addEventListener("change",async e=>{if(e.target.id==="org-picker"){S.org=S.orgs.find(x=>x.id===e.target.value);try{await dashboard();}catch(err){flash(err.message,true);}}});
-window.addEventListener("keydown",e=>{if(e.key==="Escape"&&S.helpOpen){S.helpOpen=false;render();return;}if(!S.present)return;if(e.key==="ArrowRight"&&S.slideIndex<S.present.slides.length-1){S.slideIndex++;render();}if(e.key==="ArrowLeft"&&S.slideIndex>0){S.slideIndex--;render();}if(e.key==="Escape"){S.present=null;render();}});
+window.addEventListener("keydown",e=>{if(e.key==="Escape"&&S.editor){S.editor=null;render();return;}if(e.key==="Escape"&&S.deletePrompt){S.deletePrompt=null;render();return;}if(e.key==="Escape"&&S.helpOpen){S.helpOpen=false;render();return;}if(!S.present)return;if(e.key==="ArrowRight"&&S.slideIndex<S.present.slides.length-1){S.slideIndex++;render();}if(e.key==="ArrowLeft"&&S.slideIndex>0){S.slideIndex--;render();}if(e.key==="Escape"){S.present=null;render();}});
 (async()=>{if(!configured){render();return;}parseEmailConfirmation();await refreshAuth();await restoreConfirmedIdentity();if(S.user){try{if(S.invite){await rpc("accept_invitation",{_token:S.invite});S.invite="";history.replaceState(null,"",location.pathname);}await dashboard();}catch(err){flash(err.message,true);}}else render();})();
