@@ -121,3 +121,14 @@
 .exercise-list-item p{font-size:.83rem;margin:.3rem 0;color:#677a89}
 .exercise-list-item .row{gap:.45rem}
 @media(max-width:700px){.exercise-list-item{align-items:start}}
+
+/* Locally reviewed course pack import, isolated from ordinary editing. */
+.pack-card{border-color:#bfdde1;background:#f7fcfd}
+.pack-card summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;color:#114961}
+.pack-card summary b{font-size:.96rem}
+.pack-card details[open] summary{padding-bottom:.7rem;border-bottom:1px solid #dcebf0;margin-bottom:.8rem}
+.pack-card input[type=file]{padding:.75rem;background:#fff}
+.pack-preview{background:#fff;border:1px solid #cce3e7;border-radius:10px;padding:.85rem;margin-top:.8rem}
+.pack-preview h3{margin:.2rem 0 .5rem}
+.pack-preview p{font-size:.82rem;margin:.5rem 0}
+.pack-card .notice.warn{margin:.6rem 0}
