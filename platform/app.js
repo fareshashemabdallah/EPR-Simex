@@ -308,6 +308,7 @@ function tabScenario(){
     return '<article class="event-card"><div class="row between"><div><span class="eyebrow">'+esc(stages.find(x=>x.id===i.stage_id)?.name||"Exercise update")+'</span><h3>'+esc(i.title)+'</h3></div>'+statusPill(i.status)+'</div>'+
        '<p>'+lines(i.body)+'</p>'+(i.response_prompt?'<div class="event-question"><b>Your challenge:</b> '+esc(i.response_prompt)+'</div>':"")+
        (staff()?'<p class="tiny muted">Recipients: '+esc(d("inject_targets").filter(x=>x.inject_id===i.id).map(x=>teams.find(t=>t.id===x.team_id)?.name).filter(Boolean).join(", ")||"No assigned teams")+'</p>':"")+
+       (staff()&&noteFor("inject",i.id)?.body?'<details class="facilitator-cues"><summary>Private Exercise Control notes and release guidance</summary><p>'+lines(noteFor("inject",i.id).body)+'</p></details>':"")+
        '<div class="row">'+(staff()?recordActions("injects",i)+(i.status==="draft"?'<button class="btn small primary" data-cmd="release" data-id="'+esc(i.id)+'">Release to teams</button>':""):"")+
        (isAction?'<button class="btn small primary" data-cmd="start-decision" data-id="'+esc(i.id)+'">Record team decision</button>':"")+
        (S.role==="observer"?tabAction("review","Record an observation"):"")+
