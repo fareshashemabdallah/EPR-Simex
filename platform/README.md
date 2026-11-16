@@ -68,6 +68,20 @@ The included GitHub Action runs JavaScript syntax, browser-mock workflow tests a
 
 Before real agency adoption: complete threat modeling, database/RLS and API adversarial tests, email delivery and invite rate limiting, enforced MFA/SSO, malware scanning and content disarm policy, privacy/DPIA/retention assessments, recovery and backup tests, accessibility audits and independent penetration testing, and obtain each organization's approvals.
 
+
+## Portable, organization-owned training packages (development)
+
+The Training Studio now offers **Import a training package (.json)** for an exercise lead or facilitator. The format is epr-simex-course-pack version 1, documented in platform/docs/COURSE_PACK_FORMAT.md and validated by platform/training-pack.js.
+
+- Create a **new empty draft exercise**, open **Teaching plan**, choose a local JSON file, and review the day/session/slide/team/event counts before confirming installation.
+- The JSON file is read locally in the facilitator's browser. The public GitHub repository does **not** receive its contents; after confirmation, authenticated requests create records in the configured organization database. This is not a replacement for approved infrastructure or organizational data governance.
+- The programme links training sessions to scenario stages. Private teaching cues and planned event release times are stored in restricted facilitator notes. All situation updates import as **drafts**, not automatically delivered.
+- Import will not overwrite an exercise containing existing teams, stages, sessions, slides or events. An interrupted multi-request import **may leave partial records**. Create a fresh test exercise rather than retrying into the same exercise. Atomic imports remain future work.
+- Images, PowerPoint layouts, speaker animations and original slide graphics do **not** transfer to the app's editable text slides. Present original decks separately if authorized.
+- Avoid confidential or rights-restricted course packages in the public test database. Confirm redistribution rights, security, and privacy approval first.
+
+The organization's source materials and private example JSON are deliberately NOT bundled in the public repository. Only generic reusable importer code and synthetic test fixtures are published.
+
 ## Future work
 
 - Rich content editor and supervised PPTX-to-slide conversion (basic slide and private speaker-note editing is now available)
