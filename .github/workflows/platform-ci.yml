@@ -52,6 +52,10 @@ jobs:
         run: python platform/tests/browser_e2e.py
       - name: Verify course-pack import (local, synthetic)
         run: python platform/tests/browser_course_pack.py
+      - name: Verify course-pack importer on published preview (synthetic)
+        env:
+          EPR_APP_URL: https://fareshashemabdallah.github.io/EPR-Simex/preview/?v=20261116-coursepack
+        run: python platform/tests/browser_course_pack.py
       - name: Run Chromium against live GitHub Pages preview (synthetic backend)
         env:
           EPR_APP_URL: https://fareshashemabdallah.github.io/EPR-Simex/preview/
