@@ -36,7 +36,7 @@ test("installs only drafts, separate facilitator notes and scoped records",async
  const updates=[];
  const result=await engine.install(engine.validate(s),{insert,update:async(...args)=>updates.push(args),
  orgId:"org-1",exerciseId:"ex-1",userId:"user-1",existingObjectives:""});
- assert.equal(result.records,8);
+ assert.equal(result.records,9);
  assert.equal(rows.filter(x=>x.table==="private_notes").length,2);
  assert.equal(rows.filter(x=>x.table==="injects")[0].status,"draft");
  assert.equal(rows.filter(x=>x.table==="inject_targets").length,1);
